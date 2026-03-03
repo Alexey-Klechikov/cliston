@@ -1,0 +1,99 @@
+[tool.flake8]
+show-source = true
+filename = ["*.py"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "*.pyc",
+    "webapp.wsgi",
+]
+statistics = true
+max-line-length = 119
+ignore = [
+    "W503",
+    "E203",
+    "E231",
+    "E402",
+]
+
+# Ignore unused imports in __init__.py files
+per-file-ignores = {"__init__.py" = ["F401"]}
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 119
+skip_gitignore = true
+known_first_party = ["black", "blib2to3", "blackd", "_black_version"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.pylint]
+disable = [
+    "redefined-outer-name",
+    "too-few-public-methods",
+    "cell-var-from-loop",
+    "unspecified-encoding",
+    "expression-not-assigned",
+    "logging-format-interpolation",
+    "broad-exception-caught",
+    "no-member",
+    "global-statement",
+    "global-variable-not-assigned"
+
+]
+load-plugins = ["pylint_pydantic"]
+extension-pkg-allow-list = ["pydantic"]
+
+[tool.pdm]
+distribution = true
+
+[[tool.pdm.source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+[project]
+name = "cliston"
+version = "0.1.0"
+description = "Cliston (Hank's Dredel Led robot butler named Cliston)"
+authors = [ 
+    {name = "", email = ""},
+    {name = "Alexey Klechikov", email = "mail@klechikov.info"},
+]
+dependencies = [
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.1.1",
+    "httpx>=0.28.1",
+    "fastapi>=0.135.1",
+    "uvicorn>=0.30.0",
+    "dotenv>=0.9.9",
+    "crewai>=1.6.1",
+    "duckduckgo-search>=8.1.1",
+    "crewai-tools>=1.6.1",
+    "langchain-community>=0.4.1",
+]
+requires-python = "==3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[dependency-groups]
+dev = [
+    "black",
+    "pytest",
+    "pre-commit",
+    "pylint-pydantic",
+    "flake8-pyproject",
+    "pyupgrade",
+    "pytest-env>=1.2.0",
+]
+
+[tool.black]
+line-length = 119
+target-version = ['py311']
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

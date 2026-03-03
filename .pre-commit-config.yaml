@@ -1,0 +1,48 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-case-conflict
+      - id: check-json
+        exclude: Pipfile.lock
+      - id: check-symlinks
+      - id: check-toml
+      - id: detect-private-key
+      - id: forbid-new-submodules
+      - id: pretty-format-json
+        args:
+          - --autofix
+        exclude: Pipfile.lock
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3.13
+        args: [ "--line-length", "119" ]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+    -   id: autoflake
+        args: [--remove-all-unused-imports, --in-place, --exclude=__init__.py]
+
+  -   repo: https://github.com/pycqa/isort
+      rev: 5.13.2
+      hooks:
+      -   id: isort
+          name: isort (python)
+          args: ["--profile", "black"]
+
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.1.0
+    hooks:
+      - id: add-trailing-comma
