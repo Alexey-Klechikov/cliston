@@ -17,7 +17,9 @@ ignore = [
 ]
 
 # Ignore unused imports in __init__.py files
-per-file-ignores = {"__init__.py" = ["F401"]}
+per-file-ignores = [
+    "__init__.py:F401",
+]
 
 [tool.isort]
 atomic = true
@@ -52,7 +54,7 @@ extension-pkg-allow-list = ["pydantic"]
 name = "cliston"
 version = "0.1.0"
 description = "Cliston (Hank's Dredel Led robot butler named Cliston)"
-authors = [ 
+authors = [
     {name = "Alexey Klechikov", email = "mail@klechikov.info"},
 ]
 dependencies = [

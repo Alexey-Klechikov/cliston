@@ -21,7 +21,8 @@ class AgentConfig(BaseModel):
     verbose: bool = Field(default=False, description="Verbose output during execution")
     allow_search: bool = Field(default=False, description="Whether the agent has web search capability")
     tasks_configs: list[TaskConfig] = Field(
-        default_factory=list, description="Optional list of specific tasks the agent can perform"
+        default_factory=list,
+        description="Optional list of specific tasks the agent can perform",
     )
 
 
@@ -51,7 +52,7 @@ CLISTON_CONFIG = AgentConfig(
                 "butler-like tone. Keep it concise and helpful."
             ),
             expected_output="A polite response in Cliston's voice.",
-        )
+        ),
     ],
 )
 
@@ -80,6 +81,6 @@ MTB_CONFIG = AgentConfig(
                 "clearly and factually. Use the web search tool when needed."
             ),
             expected_output="A concise factual summary of findings about {topic}.",
-        )
+        ),
     ],
 )

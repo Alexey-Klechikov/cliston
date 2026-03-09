@@ -1,9 +1,8 @@
 import logging
 
-from crewai import Task, Agent
+from crewai import Agent, Task
 
 from agents import TaskConfig
-
 
 _tasks: dict[str, Task] = {}
 

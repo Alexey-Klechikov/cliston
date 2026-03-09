@@ -1,10 +1,11 @@
 import logging
 
 from crewai import Crew, Process
+
+from agents import AgentConfig
+from config import ModelConfig
 from services.crewai.agent import get_agent
 from services.crewai.task import compose_task
-from config import ModelConfig
-from agents import AgentConfig
 
 
 def build_crew(agents_configs: list[AgentConfig]) -> Crew:

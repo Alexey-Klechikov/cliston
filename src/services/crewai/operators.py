@@ -1,9 +1,9 @@
 import asyncio
 import logging
 
+from agents import CLISTON_CONFIG, MTB_CONFIG
 from services.crewai.crew import build_crew
 from services.crewai.models import CrewResponse
-from agents import CLISTON_CONFIG, MTB_CONFIG
 
 
 def _process_message_sync(user_message: str) -> CrewResponse:
@@ -20,6 +20,6 @@ async def process_message_background(user_message: str, task_id: str) -> None:
     try:
         result = await asyncio.to_thread(_process_message_sync, user_message)
         logging.info("Task %s completed. Result: %s", task_id, result.response)
-        
+
     except Exception:
         logging.exception("Task %s failed", task_id)

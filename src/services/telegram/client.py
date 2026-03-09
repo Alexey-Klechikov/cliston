@@ -1,6 +1,6 @@
 import os
 
-from telegram import Bot, Update
+from telegram import Bot
 
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN")  # type: ignore
 

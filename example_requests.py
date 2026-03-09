@@ -12,15 +12,8 @@ load_dotenv()
 SRC_DIR = Path(__file__).resolve().parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from services.telegram.operators import (
-    add_message_reaction,
-    get_chat_updates,
-    list_chats,
-    list_users,
-    send_message,
-)
 from services.telegram.models import ReactionEmoji
-
+from services.telegram.operators import add_message_reaction, get_chat_updates, list_chats, list_users, send_message
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8100")
