@@ -42,25 +42,17 @@ disable = [
     "broad-exception-caught",
     "no-member",
     "global-statement",
-    "global-variable-not-assigned"
-
+    "global-variable-not-assigned",
+    "no-name-in-module"
 ]
 load-plugins = ["pylint_pydantic"]
 extension-pkg-allow-list = ["pydantic"]
 
-[tool.pdm]
-distribution = true
-
-[[tool.pdm.source]]
-url = "https://pypi.org/simple"
-verify_ssl = true
-name = "pypi"
 [project]
 name = "cliston"
 version = "0.1.0"
 description = "Cliston (Hank's Dredel Led robot butler named Cliston)"
 authors = [ 
-    {name = "", email = ""},
     {name = "Alexey Klechikov", email = "mail@klechikov.info"},
 ]
 dependencies = [
@@ -68,14 +60,18 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "httpx>=0.28.1",
     "fastapi>=0.135.1",
+    "python-telegram-bot>=21.7",
     "uvicorn>=0.30.0",
     "dotenv>=0.9.9",
     "crewai>=1.6.1",
+    "litellm>=1.44.0",
+    "ollama>=0.1.9",
     "duckduckgo-search>=8.1.1",
     "crewai-tools>=1.6.1",
     "langchain-community>=0.4.1",
+    "sentence-transformers>=5.2.3",
 ]
-requires-python = "==3.12"
+requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
 
@@ -92,8 +88,11 @@ dev = [
 
 [tool.black]
 line-length = 119
-target-version = ['py311']
+target-version = ['py312']
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -2,7 +2,7 @@ import logging
 
 from crewai import LLM
 
-from settings.config import ModelConfig
+from config import ModelConfig
 
 _llm: LLM | None = None
 

@@ -4,7 +4,7 @@ from crewai import Agent
 from crewai.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 
-from settings.agents import AgentConfig
+from agents import AgentConfig
 from services.crewai.llm import get_llm
 
 

@@ -2,7 +2,7 @@ import logging
 
 from crewai import Task, Agent
 
-from settings.agents import TaskConfig
+from agents import TaskConfig
 
 
 _tasks: dict[str, Task] = {}

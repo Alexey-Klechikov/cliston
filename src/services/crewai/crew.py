@@ -3,8 +3,8 @@ import logging
 from crewai import Crew, Process
 from services.crewai.agent import get_agent
 from services.crewai.task import compose_task
-from settings.config import ModelConfig
-from settings.agents import AgentConfig
+from config import ModelConfig
+from agents import AgentConfig
 
 
 def build_crew(agents_configs: list[AgentConfig]) -> Crew:
@@ -28,7 +28,7 @@ def build_crew(agents_configs: list[AgentConfig]) -> Crew:
         verbose=True,
         embedder={
             "provider": "ollama",
-            "config": {"model_name": ModelConfig.EMBEDDING_MODEL},
+            "config": {"model_name": ModelConfig.EMBEDDING_MODEL},  # TODO: HERE
         },
     )
 

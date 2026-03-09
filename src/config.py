@@ -8,7 +8,7 @@ class ModelConfig:
     TOP_K = 40
 
     # Ollama connection (used when running a local model)
-    OLLAMA_HOST = "http://host.docker.internal:11434"
+    OLLAMA_HOST = "http://localhost:11434"
 
     # Embedding model for CrewAI memory
     EMBEDDING_MODEL = "mxbai-embed-large"

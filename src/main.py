@@ -13,8 +13,9 @@ from fastapi.responses import JSONResponse
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import routers
+from api.task.routers import router as task_router
 from api.health.routers import router as health_router
-from settings.config import AppConfig
+from config import AppConfig
 
 # Configure logging
 log_level = AppConfig.LOG_LEVEL
@@ -71,6 +72,7 @@ async def check_cliston_initialization(request: Request, call_next):
 
 # Register routers
 app.include_router(health_router)
+app.include_router(task_router)
 
 
 # Exception handlers
