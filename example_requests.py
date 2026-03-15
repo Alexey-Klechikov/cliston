@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -29,6 +30,11 @@ REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
 TASK_MESSAGE = "Find me the latest price of OMX30 index"
+# TASK_MESSAGE = "Tell me the weather in Stockholm right now"
+# TASK_MESSAGE ="Tell me what Activa Share is"
+
+TASK_POLL_INTERVAL_SECONDS = 10.0
+TASK_POLL_TIMEOUT_SECONDS = 180.0
 
 
 async def ping_telegram() -> None:
@@ -65,13 +71,35 @@ async def test_task_execute() -> None:
         raise RuntimeError("X_API_KEY env var is not set")
 
     async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=60.0) as client:
-        response = await client.post(
+        submit_response = await client.post(
             "/task/execute",
             json={"user_message": TASK_MESSAGE},
             headers={"x-api-key": API_KEY},
         )
-        response.raise_for_status()
-        print(json.dumps(response.json(), indent=2))
+        submit_response.raise_for_status()
+        task = submit_response.json()
+        print(json.dumps(task, indent=2))
+
+        task_id = task["task_id"]
+        deadline = time.monotonic() + TASK_POLL_TIMEOUT_SECONDS
+
+        while True:
+            await asyncio.sleep(TASK_POLL_INTERVAL_SECONDS)
+
+            status_response = await client.get(
+                f"/task/{task_id}",
+                headers={"x-api-key": API_KEY},
+            )
+            status_response.raise_for_status()
+            status_payload = status_response.json()
+            print(json.dumps(status_payload, indent=2))
+
+            status_value = status_payload.get("status")
+            if status_value in {"completed", "failed"}:
+                break
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"Timed out waiting for task {task_id}")
 
 
 if __name__ == "__main__":

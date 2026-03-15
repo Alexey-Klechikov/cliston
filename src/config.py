@@ -3,9 +3,9 @@ class ModelConfig:
     MODEL = "ollama/phi3.5"
 
     # Temperature and sampling parameters
-    TEMPERATURE = 0.8
-    TOP_P = 0.85
-    TOP_K = 40
+    TEMPERATURE = 0.2
+    TOP_P = 0.7
+    TOP_K = 20
 
     # Ollama connection (used when running a local model)
     OLLAMA_HOST = "http://localhost:11434"

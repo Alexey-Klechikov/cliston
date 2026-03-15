@@ -25,7 +25,7 @@ def build_crew(agents_configs: list[AgentConfig]) -> Crew:
         agents=crew_agents,  # type: ignore
         tasks=crew_tasks,
         process=Process.sequential,
-        memory=True,
+        memory=False,
         verbose=True,
         embedder={
             "provider": "ollama",
