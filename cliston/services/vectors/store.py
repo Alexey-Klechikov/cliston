@@ -1,12 +1,13 @@
 import asyncio
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import chromadb
 import numpy as np
 from config import VectorConfig
 from services.document.models import Chunk, ChunkMetadata
-from services.vectors.embedder import EmbeddingService
+from services.embedder.client import EmbeddingService
 from services.vectors.models import ChunksTracker
 from utils import asyncify
 
@@ -65,7 +66,7 @@ class VectorStore:
             return existing_chunks
 
     @asyncify
-    def _add_new_chunks_to_collection(self, embeddings: list[list[float]]) -> None:
+    def _add_new_chunks_to_collection(self, embeddings: Sequence[np.ndarray]) -> None:
         try:
             self.collection.add(
                 ids=self.chunks_tracker.new_ids,
@@ -118,7 +119,7 @@ class VectorStore:
             f"new chunks (skipped {self.chunks_tracker.skipped_chunks} "
             f"existing/duplicates, {self.chunks_tracker.duplicate_in_batch} duplicate-in-batch)...",
         )
-        embeddings = await self.embedding_service.embed_texts(self.chunks_tracker.new_texts)
+        embeddings = self.embedding_service.embed_texts(self.chunks_tracker.new_texts)
 
         if len(embeddings) != len(self.chunks_tracker.new_texts):
             raise ValueError(
@@ -133,7 +134,7 @@ class VectorStore:
     async def query(self, query_text: str, top_k: int = VectorConfig.RETRIEVAL_TOP_K) -> list[Chunk]:
         retrieved_documents = []
 
-        query_embedding = await self.embedding_service.embed_text(query_text)
+        query_embedding = self.embedding_service.embed_text(query_text)
         results = await asyncio.to_thread(
             self.collection.query,
             query_embeddings=[query_embedding],
@@ -228,3 +229,13 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"},
         )
         logging.info("Vector store cleared")
+
+
+_vector_store: VectorStore | None = None
+
+
+def get_vector_store() -> VectorStore:
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = VectorStore()
+    return _vector_store

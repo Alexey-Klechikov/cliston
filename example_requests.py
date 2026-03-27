@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SRC_DIR = Path(__file__).resolve().parent / "src"
+SRC_DIR = Path(__file__).resolve().parent / "cliston"
 sys.path.insert(0, str(SRC_DIR))
 
 from cliston.services.telegram.models import ReactionEmoji
@@ -27,7 +27,8 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8100")
 EMBADDER_SERVICE_URL = os.getenv("EMBEDDER_SERVICE_URL", "http://localhost:8009")
 
 
-MODE = "task_execute"  # "send", "updates", "chats", "users", "reaction", "task_execute", "embed"
+MODE = "task_execute"  # "send", "updates", "chats", "users", "reaction", "task_execute",
+# "embed", "extract_character_profile"
 
 # Telegram
 CHAT_ID = 1763158218
@@ -36,11 +37,12 @@ MESSAGE_ID = 3085
 REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
-TASK_MESSAGE = "Find me the latest price of OMX30 index"
-# TASK_MESSAGE = "Tell me the weather in Stockholm right now"
-# TASK_MESSAGE ="Tell me what Activa Share is"
+# TASK_MESSAGE = "Find me the latest price of OMX30 index"
+TASK_MESSAGE = "Tell me the weather in Stockholm right now"
+# TASK_MESSAGE = "Tell me more about the weather. Wind speed, humidity, and more"
+# TASK_MESSAGE ="Tell me what Active Share is"
 
-TASK_POLL_INTERVAL_SECONDS = 10.0
+TASK_POLL_INTERVAL_SECONDS = 20.0
 TASK_POLL_TIMEOUT_SECONDS = 180.0
 
 
@@ -74,7 +76,7 @@ async def ping_telegram() -> None:
 
 
 async def test_task_execute() -> None:
-    async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=60.0) as client:
+    async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=600.0) as client:
         submit_response = await client.post(
             "/task/execute",
             json={"user_message": TASK_MESSAGE},
@@ -104,8 +106,20 @@ async def test_task_execute() -> None:
                 raise TimeoutError(f"Timed out waiting for task {task_id}")
 
 
+async def test_extract_character_profile(character_name: str) -> None:
+    async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=600.0) as client:
+        response = await client.get(
+            "/rag/extract_character_profile",
+            params={"character_name": character_name},
+        )
+        response.raise_for_status()
+        print(response.json())
+
+
 if __name__ == "__main__":
     if MODE == "task_execute":
         asyncio.run(test_task_execute())
+    elif MODE == "extract_character_profile":
+        asyncio.run(test_extract_character_profile(character_name="MTB"))
     else:
         asyncio.run(ping_telegram())

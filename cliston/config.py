@@ -5,24 +5,20 @@ from data import DATA_DIR
 
 
 class ModelConfig:
-    # LLM used by CrewAI agents
-    MODEL = "ollama/phi3.5"
+    GEMINI_MODEL = "gemini/gemini-flash-latest"
 
-    # Temperature and sampling parameters
     TEMPERATURE = 0.2
     TOP_P = 0.7
-    TOP_K = 20
 
-    # Ollama connection (used when running a local model)
-    OLLAMA_HOST = "http://localhost:11434"
 
-    # Embedding model for CrewAI memory
-    EMBEDDING_MODEL = "mxbai-embed-large"
-
+class EmbedderConfig:
     # This is taken from docker-compose environment variable
     EMBEDDER_URL = os.getenv("EMBEDDER_URL", "http://0.0.0.0:8009")
     EMBEDDER_TIMEOUT_SECONDS = float(os.getenv("EMBEDDER_TIMEOUT_SECONDS", "120"))
     EMBEDDER_BATCH_SIZE = int(os.getenv("EMBEDDER_BATCH_SIZE", "32"))
+
+    CREWAI_STORAGE_DIR = Path(DATA_DIR) / "crewai_storage"
+    CREWAI_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class DocumentConfig:
@@ -34,7 +30,7 @@ class DocumentConfig:
     CHUNK_OVERLAP = 150
 
     # Separators for recursive splitting (Swedish-aware)
-    SEPARATORS = ["\n\n", "\n", ".", "!", "?"]
+    SEPARATORS = ["\n\n\n", "\n\n", "\n", ".", "!", "?"]
 
 
 class VectorConfig:
@@ -44,7 +40,7 @@ class VectorConfig:
     COLLECTION_NAME_BOOKS = "books"
 
     # Retrieval parameters (number of chunks to retrieve for a query)
-    RETRIEVAL_TOP_K = 20
+    RETRIEVAL_TOP_K = 200
 
 
 class AppConfig:

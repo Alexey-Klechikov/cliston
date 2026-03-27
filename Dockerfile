@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir uv \
 
 # Copy code for services
 COPY cliston ./cliston
-COPY embedder_service ./embedder_service
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1

@@ -34,7 +34,7 @@ class HybridRetriever:
 
         return vector_result_chunks
 
-    def format_context(self, chunks: list[Chunk], include_metadata: bool = True) -> str:
+    def format_context(self, chunks: list[Chunk], include_metadata: bool = True) -> list[str]:
         context_parts = []
         for i, chunk in enumerate(chunks):
             text = chunk.text
@@ -46,4 +46,4 @@ class HybridRetriever:
             else:
                 context_parts.append(text)
 
-        return "\n\n---\n\n".join(context_parts)
+        return context_parts

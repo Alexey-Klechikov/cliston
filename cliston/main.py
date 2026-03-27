@@ -11,9 +11,10 @@ from fastapi.responses import JSONResponse
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from api.health.routers import router as health_router
 
 # Import routers
+from api.health.routers import router as health_router
+from api.rag.routers import router as rag_router
 from api.task.routers import router as task_router
 from config import AppConfig
 
@@ -50,6 +51,7 @@ app = FastAPI(
 # Register routers
 app.include_router(health_router)
 app.include_router(task_router)
+app.include_router(rag_router)
 
 
 # Exception handlers

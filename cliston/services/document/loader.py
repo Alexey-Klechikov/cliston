@@ -48,3 +48,13 @@ class DocumentLoader:
 
         logging.info(f"Total chunks created: {len(all_chunks)}")
         return all_chunks
+
+
+_document_loader: DocumentLoader | None = None
+
+
+def get_document_loader() -> DocumentLoader:
+    global _document_loader
+    if _document_loader is None:
+        _document_loader = DocumentLoader()
+    return _document_loader

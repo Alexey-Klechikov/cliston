@@ -3,12 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: chat-service
+    container_name: cliston
     ports:
-      - "8000:8000"
+      - "8100:8100"
     volumes:
       # Mount data directory to persist vectorstore, conversation cache, and resources
-      - ./chat_service/data:/app/chat_service/data
+      - ./cliston/data:/app/cliston/data
     environment:
       - PYTHONUNBUFFERED=1
       - EMBEDDER_URL=http://embedder-service:8009
@@ -18,59 +18,3 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    networks:
-      - leaf-chat-network
-    depends_on:
-      - embedder-service
-
-  embedder-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: embedder-service
-    command:
-      [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "uvicorn",
-        "embedder_service.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8009",
-      ]
-    ports:
-      - "8009:8009"
-    volumes:
-      - ./embedder_service:/app/embedder_service
-    environment:
-      - PYTHONUNBUFFERED=1
-      - EMBEDDER_CACHE_DIR=/app/embedder_service/loaded_models
-    restart: unless-stopped
-    networks:
-      - leaf-chat-network
-
-  network-tunnel:
-    image: cloudflare/cloudflared:2026.2.0
-    container_name: network-tunnel
-    command: tunnel --config /etc/network-tunnel/config.yml run
-    depends_on:
-      chat-service:
-        condition: service_started
-    restart: unless-stopped
-    user: "0"
-    volumes:
-      - network-tunnel-data:/root/.network-tunnel
-      - ./network_tunnel/config.yml:/etc/network-tunnel/config.yml:ro
-    networks:
-      - leaf-chat-network
-
-networks:
-  leaf-chat-network:
-    driver: bridge
-
-volumes:
-  network-tunnel-data:
-    name: network-tunnel-data

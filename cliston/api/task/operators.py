@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from datetime import date
 
 from agents import CLISTON_CONFIG, MTB_CONFIG
-from services.crewai.crew import build_crew
-from services.crewai.models import CrewResponse
+
+from cliston.api.task.crew import build_crew
+from cliston.api.task.models import CrewResponse
 
 
 @dataclass

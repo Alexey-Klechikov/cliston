@@ -1,4 +1,5 @@
 import logging
+import os
 
 from config import ModelConfig
 from crewai import LLM
@@ -10,12 +11,11 @@ def get_llm() -> LLM:
     global _llm
     if _llm is None:
         _llm = LLM(
-            model=ModelConfig.MODEL,
-            base_url=ModelConfig.OLLAMA_HOST,
+            model=ModelConfig.GEMINI_MODEL,
+            api_key=os.getenv("GOOGLE_STUDIO_KEY"),
             temperature=ModelConfig.TEMPERATURE,
             top_p=ModelConfig.TOP_P,
-            top_k=ModelConfig.TOP_K,
         )
-        logging.info("LLM initialized with model: %s", ModelConfig.MODEL)
+        logging.info("LLM initialized with model: %s", ModelConfig.GEMINI_MODEL)
 
     return _llm
