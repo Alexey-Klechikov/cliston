@@ -1,12 +1,11 @@
 import logging
-import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 
 # Add parent directory to path to allow imports
@@ -47,29 +46,6 @@ app = FastAPI(
     description="Cliston",
     lifespan=lifespan,
 )
-
-
-# Middleware to check Cliston initialization
-@app.middleware("http")
-async def check_cliston_initialization(request: Request, call_next):
-    # Enforce static API token on every request
-    auth_header = request.headers.get("x-api-key") or request.headers.get("authorization")
-    token = auth_header
-    if auth_header and auth_header.lower().startswith("bearer "):
-        token = auth_header.split(" ", 1)[1].strip()
-
-    # Check authentication for non-health endpoints
-    if request.url.path.startswith("/health"):
-        pass
-    elif not token or token != os.getenv("X_API_KEY"):
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"detail": "Unauthorized"},
-        )
-
-    response = await call_next(request)
-    return response
-
 
 # Register routers
 app.include_router(health_router)

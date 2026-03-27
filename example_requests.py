@@ -13,14 +13,21 @@ load_dotenv()
 SRC_DIR = Path(__file__).resolve().parent / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from services.telegram.models import ReactionEmoji
-from services.telegram.operators import add_message_reaction, get_chat_updates, list_chats, list_users, send_message
+from cliston.services.telegram.models import ReactionEmoji
+from cliston.services.telegram.operators import (
+    add_message_reaction,
+    get_chat_updates,
+    list_chats,
+    list_users,
+    send_message,
+)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8100")
-API_KEY = os.getenv("X_API_KEY")
+EMBADDER_SERVICE_URL = os.getenv("EMBEDDER_SERVICE_URL", "http://localhost:8009")
 
-MODE = "task_execute"  # "send", "updates", "chats", "users", "reaction", "task_execute"
+
+MODE = "task_execute"  # "send", "updates", "chats", "users", "reaction", "task_execute", "embed"
 
 # Telegram
 CHAT_ID = 1763158218
@@ -67,14 +74,10 @@ async def ping_telegram() -> None:
 
 
 async def test_task_execute() -> None:
-    if not API_KEY:
-        raise RuntimeError("X_API_KEY env var is not set")
-
     async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=60.0) as client:
         submit_response = await client.post(
             "/task/execute",
             json={"user_message": TASK_MESSAGE},
-            headers={"x-api-key": API_KEY},
         )
         submit_response.raise_for_status()
         task = submit_response.json()
@@ -88,7 +91,6 @@ async def test_task_execute() -> None:
 
             status_response = await client.get(
                 f"/task/{task_id}",
-                headers={"x-api-key": API_KEY},
             )
             status_response.raise_for_status()
             status_payload = status_response.json()

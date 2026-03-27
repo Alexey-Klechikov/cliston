@@ -1,9 +1,8 @@
 import asyncio
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, status
-
 from api.task.models import TaskResultResponse, TaskSubmitResponse
+from fastapi import APIRouter, HTTPException, status
 from services.crewai.models import TaskInput
 from services.crewai.operators import get_task_result, process_message_background, register_task
 

@@ -1,8 +1,11 @@
+default_install_hook_types: ["pre-commit"]
+exclude: '^.+_pb2\.py$'  # ignore generated codes
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: check-yaml
+      - id: debug-statements
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-case-conflict
@@ -18,18 +21,27 @@ repos:
         exclude: Pipfile.lock
 
   - repo: https://github.com/psf/black
-    rev: 24.4.2
+    rev: 24.3.0
     hooks:
       - id: black
         language_version: python3.12
         args: [ "--line-length", "119" ]
 
+
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0
+    rev: 7.0.0
     hooks:
       - id: flake8
-        additional_dependencies:
-          - flake8-pyproject
+        language_version: python3.12
+        args:
+          [
+            "--max-line-length",
+            "119",
+            "--ignore",
+            "E402,E203,W503",
+            "--per-file-ignores",
+            "__init__.py:F401",
+          ]
 
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.1
@@ -42,9 +54,15 @@ repos:
       hooks:
       -   id: isort
           name: isort (python)
-          args: ["--profile", "black"]
+          args: ["--profile", "black", "--line-length", "119"]
 
   - repo: https://github.com/asottile/add-trailing-comma
     rev: v3.1.0
     hooks:
       - id: add-trailing-comma
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.7.0
+    hooks:
+      - id: pyupgrade
+        args: [--py311-plus]

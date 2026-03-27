@@ -1,9 +1,8 @@
 import logging
 
-from crewai import Crew, Process
-
 from agents import AgentConfig
 from config import ModelConfig
+from crewai import Crew, Process
 from services.crewai.agent import get_agent
 from services.crewai.task import compose_task
 

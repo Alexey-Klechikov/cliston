@@ -1,7 +1,6 @@
-from telegram import ReactionTypeEmoji
-
 from services.telegram.client import get_telegram_client
 from services.telegram.models import Chat, ChatMessage, ChatUpdate, ReactionEmoji, User
+from telegram import ReactionTypeEmoji
 
 
 async def get_chat_updates(chat_id: int | None = None) -> list[ChatUpdate]:

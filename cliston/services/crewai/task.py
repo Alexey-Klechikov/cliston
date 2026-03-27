@@ -1,8 +1,7 @@
 import logging
 
-from crewai import Agent, Task
-
 from agents import TaskConfig
+from crewai import Agent, Task
 
 
 def compose_task(agent: Agent, task_config: TaskConfig) -> Task:
