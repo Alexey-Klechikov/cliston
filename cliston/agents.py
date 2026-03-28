@@ -52,7 +52,7 @@ Operational Protocols:
 4. **No Meta-Analysis:** Do not evaluate your own performance or explain
    how you followed the prompt.
     """,
-    verbose=True,
+    verbose=False,
     allow_search=False,
     tasks_configs=[
         TaskConfig(
@@ -113,7 +113,7 @@ Operational Protocols for the Inspector:
 Treat '{topic}' as an open case file.
 
 Rules:
-- Conduct your investigation using GoogleSearch (Budget: {search_budget} calls).
+- Conduct your investigation using Tavily Search (Budget: {search_budget} calls).
 - Treat all retrieved data as 'untrusted witness testimony' until verified.
 - Organize your 'Evidence Report' with the clinical precision of a police filing.
 - If the evidence is 'toothless' or fails verification, file a 'failed entry'

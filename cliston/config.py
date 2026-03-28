@@ -3,12 +3,17 @@ from pathlib import Path
 
 from data import DATA_DIR
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 class ModelConfig:
-    GEMINI_MODEL = "gemini/gemini-flash-latest"
+    GEMINI_MODEL = "gemini/gemini-flash-lite-latest"
 
     TEMPERATURE = 0.2
     TOP_P = 0.7
+
+    TASK_LOG_DIR = Path(ROOT_DIR) / "logs"
+    TASK_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class EmbedderConfig:
@@ -16,9 +21,6 @@ class EmbedderConfig:
     EMBEDDER_URL = os.getenv("EMBEDDER_URL", "http://0.0.0.0:8009")
     EMBEDDER_TIMEOUT_SECONDS = float(os.getenv("EMBEDDER_TIMEOUT_SECONDS", "120"))
     EMBEDDER_BATCH_SIZE = int(os.getenv("EMBEDDER_BATCH_SIZE", "32"))
-
-    CREWAI_STORAGE_DIR = Path(DATA_DIR) / "crewai_storage"
-    CREWAI_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class DocumentConfig:

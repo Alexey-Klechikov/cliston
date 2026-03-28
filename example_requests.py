@@ -6,9 +6,6 @@ import time
 from pathlib import Path
 
 import httpx
-from dotenv import load_dotenv
-
-load_dotenv()
 
 SRC_DIR = Path(__file__).resolve().parent / "cliston"
 sys.path.insert(0, str(SRC_DIR))
@@ -23,7 +20,7 @@ from cliston.services.telegram.operators import (
 )
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8100")
+API_BASE_URL = "http://localhost:8100"
 EMBADDER_SERVICE_URL = os.getenv("EMBEDDER_SERVICE_URL", "http://localhost:8009")
 
 
@@ -39,7 +36,6 @@ REACTION = ReactionEmoji.THUMBS_UP
 # Task
 # TASK_MESSAGE = "Find me the latest price of OMX30 index"
 TASK_MESSAGE = "Tell me the weather in Stockholm right now"
-# TASK_MESSAGE = "Tell me more about the weather. Wind speed, humidity, and more"
 # TASK_MESSAGE ="Tell me what Active Share is"
 
 TASK_POLL_INTERVAL_SECONDS = 20.0

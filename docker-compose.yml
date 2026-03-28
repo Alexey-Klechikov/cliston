@@ -9,6 +9,7 @@ services:
     volumes:
       # Mount data directory to persist vectorstore, conversation cache, and resources
       - ./cliston/data:/app/cliston/data
+      - ./cliston/logs:/app/cliston/logs
     environment:
       - PYTHONUNBUFFERED=1
       - EMBEDDER_URL=http://embedder-service:8009

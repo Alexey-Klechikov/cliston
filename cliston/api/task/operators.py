@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from agents import CLISTON_CONFIG, MTB_CONFIG
+from services.logging.operators import log_task_input, rename_log_file
 
 from cliston.api.task.crew import build_crew
 from cliston.api.task.models import CrewResponse
@@ -21,7 +22,7 @@ class TaskExecutionResult:
 _task_results: dict[str, TaskExecutionResult] = {}
 
 
-_CREW_KICKOFF_TIMEOUT_SECONDS = 180
+_CREW_KICKOFF_TIMEOUT_SECONDS = 300
 
 
 def _contains_prompt_injection_junk(text: str) -> bool:
@@ -64,8 +65,8 @@ def get_task_result(task_id: str) -> TaskExecutionResult | None:
     return _task_results.get(task_id)
 
 
-def _process_message_sync(user_message: str) -> CrewResponse:
-    crew = build_crew(agents_configs=[MTB_CONFIG, CLISTON_CONFIG])
+def _process_message_sync(user_message: str, task_id: str) -> CrewResponse:
+    crew = build_crew(agents_configs=[MTB_CONFIG, CLISTON_CONFIG], task_id=task_id)
     executor: concurrent.futures.ThreadPoolExecutor | None = None
 
     try:
@@ -111,8 +112,10 @@ async def process_message_background(user_message: str, task_id: str) -> None:
 
     task_state.status = "running"
 
+    log_task_input(user_message=user_message, task_id=task_id)
+
     try:
-        result = await asyncio.to_thread(_process_message_sync, user_message)
+        result = await asyncio.to_thread(_process_message_sync, user_message, task_id)
         task_state.status = "completed"
         task_state.response = result.response
         task_state.error = None
@@ -123,3 +126,5 @@ async def process_message_background(user_message: str, task_id: str) -> None:
         task_state.response = None
         task_state.error = str(exc)
         logging.exception("Task %s failed", task_id)
+
+    rename_log_file(task_id=task_id, state=task_state.status)

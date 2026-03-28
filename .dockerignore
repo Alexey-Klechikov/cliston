@@ -50,7 +50,6 @@ docker-compose.yml
 .dockerignore
 
 # Documentation
-README.md
 docs/
 
 # OS
