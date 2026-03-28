@@ -7,7 +7,8 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ModelConfig:
-    GEMINI_MODEL = "gemini/gemini-flash-lite-latest"
+    CREWAI_GEMINI_MODEL = "gemini/gemini-flash-lite-latest"
+    ASK_GEMINI_MODEL = "gemini-flash-latest"
 
     TEMPERATURE = 0.2
     TOP_P = 0.7

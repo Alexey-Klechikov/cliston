@@ -34,9 +34,9 @@ MESSAGE_ID = 3085
 REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
-# TASK_MESSAGE = "Find me the latest price of OMX30 index"
-TASK_MESSAGE = "Tell me the weather in Stockholm right now"
-# TASK_MESSAGE ="Tell me what Active Share is"
+# TASK_MESSAGE = "Find me the latest price of OMXS30 index"
+# TASK_MESSAGE = "Tell me the weather in Stockholm right now"
+TASK_MESSAGE = "Explain to me what Active Share is"
 
 TASK_POLL_INTERVAL_SECONDS = 20.0
 TASK_POLL_TIMEOUT_SECONDS = 180.0

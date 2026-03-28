@@ -8,7 +8,7 @@ from cliston.api.task.llm import get_llm
 
 _agents: dict[str, Agent] = {}
 
-search_tool = TavilySearchTool(search_depth="basic")
+search_tool = TavilySearchTool(search_depth="advanced")
 
 
 def get_agent(config: AgentConfig) -> Agent:
