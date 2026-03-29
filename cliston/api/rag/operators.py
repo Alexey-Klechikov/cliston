@@ -39,7 +39,7 @@ async def handle_extract_character_profile(character_name: str) -> ExtractCharac
     context = retriever.format_context(chunks)
 
     character_profile = await ask(
-        model=ModelConfig.ASK_GEMINI_MODEL,
+        model=ModelConfig.SUPERIOR_GEMINI_MODEL,
         system_prompt=CharacterPersonalityExtractionPrompt.get(),
         document_context=context,
         user_prompt="Character name to extract: " + character_name,

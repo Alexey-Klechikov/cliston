@@ -34,9 +34,11 @@ MESSAGE_ID = 3085
 REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
-# TASK_MESSAGE = "Find me the latest price of OMXS30 index"
+TASK_MESSAGE = "Find me the latest price of OMXS30 index"
 # TASK_MESSAGE = "Tell me the weather in Stockholm right now"
-TASK_MESSAGE = "Explain to me what Active Share is"
+# TASK_MESSAGE = "Explain to me what Active Share is"
+# TASK_MESSAGE = "Do the following actions in the browser: Access 'www.avanza.se', search for
+# 'OMXS30', and tell me the latest price and 1-day price change in percentage"
 
 TASK_POLL_INTERVAL_SECONDS = 20.0
 TASK_POLL_TIMEOUT_SECONDS = 180.0
@@ -116,6 +118,6 @@ if __name__ == "__main__":
     if MODE == "task_execute":
         asyncio.run(test_task_execute())
     elif MODE == "extract_character_profile":
-        asyncio.run(test_extract_character_profile(character_name="MTB"))
+        asyncio.run(test_extract_character_profile(character_name="Garm"))
     else:
         asyncio.run(ping_telegram())

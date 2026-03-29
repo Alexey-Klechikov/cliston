@@ -7,11 +7,16 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ModelConfig:
-    CREWAI_GEMINI_MODEL = "gemini/gemini-flash-lite-latest"
-    ASK_GEMINI_MODEL = "gemini-flash-latest"
+    SUPERIOR_GEMINI_MODEL = "gemini-2.5-flash"
+    ACCURATE_GEMINI_MODEL = "gemini-2.5-flash-lite"
+    FAST_GEMINI_MODEL = "gemini-2.5-flash-lite"
 
     TEMPERATURE = 0.2
     TOP_P = 0.7
+
+
+class TaskExecutionConfig:
+    SEARCH_COUNT_LIMIT = 3
 
     TASK_LOG_DIR = Path(ROOT_DIR) / "logs"
     TASK_LOG_DIR.mkdir(parents=True, exist_ok=True)
