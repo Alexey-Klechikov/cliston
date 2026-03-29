@@ -6,11 +6,11 @@ from config import ModelConfig
 from google.genai import types
 from services.genai.operators import get_or_create_chat
 from services.logging.operators import log_task_output
-from services.tavili_search.models import Topic
-from services.tavili_search.operators import web_search
-from services.tavili_search.tools import tavily_search_tool
+from services.tavily_search.models import Topic
+from services.tavily_search.operators import web_search
+from services.tavily_search.tools import tavily_search_tool
 
-from cliston.core.utils import extract_response_text, iteration_counter_part
+from cliston.core.utils import extract_response_text, get_tool_calls_from_response, iteration_counter_part
 
 
 class AgentConfig:
@@ -105,26 +105,28 @@ async def call_mtb_for_research(user_query: str, task_id: str) -> str:
 
         response = await asyncio.to_thread(chat.send_message, request)
 
-        required_tool_calls = response.function_calls or []
-        if not required_tool_calls:
-            logging.info("No tool calls detected needed. Stop iteration.")
+        tool_calls = get_tool_calls_from_response(response)
+        if not tool_calls:
             break
 
         request = []
-        for call in required_tool_calls:
-            if call.name != "web_search":
+        for tool_call in tool_calls:
+            if tool_call.name != "web_search":
                 continue
 
-            args: dict = call.args  # type: ignore
-            if "topic" in args:
-                args["topic"] = Topic(args["topic"])
+            if "topic" in tool_call.arguments:
+                tool_call.arguments["topic"] = Topic(tool_call.arguments["topic"])
 
-            logging.info(f"MTB -> calling web_search: {args}")
-            result = await web_search(**args)
+            logging.info(f"MTB -> calling web_search: {tool_call.arguments}")
+            result = await web_search(**tool_call.arguments)
 
-            request.append(types.Part.from_function_response(name=call.name, response={"result": result}))
+            request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
 
-    output = extract_response_text(response) if response else ""
+    output = (
+        extract_response_text(response)
+        if response
+        else "STATUS: No credible evidence found. The web is a sewer, and the case goes cold."
+    )
     log_task_output(role=AgentConfig.ROLE, task_id=task_id, output=output)
 
     return output

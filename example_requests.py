@@ -34,6 +34,7 @@ MESSAGE_ID = 3085
 REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
+# TASK_MESSAGE="How are you Cliston?"
 TASK_MESSAGE = "Find me the latest price of OMXS30 index"
 # TASK_MESSAGE = "Tell me the weather in Stockholm right now"
 # TASK_MESSAGE = "Explain to me what Active Share is"
@@ -77,7 +78,7 @@ async def test_task_execute() -> None:
     async with httpx.AsyncClient(base_url=API_BASE_URL, timeout=600.0) as client:
         submit_response = await client.post(
             "/task/execute",
-            json={"user_message": TASK_MESSAGE},
+            json={"user_query": TASK_MESSAGE},
         )
         submit_response.raise_for_status()
         task = submit_response.json()

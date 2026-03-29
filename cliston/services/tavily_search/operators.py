@@ -1,7 +1,7 @@
 import re
 
-from services.tavili_search.client import get_client
-from services.tavili_search.models import SearchDepth, Topic
+from services.tavily_search.client import get_client
+from services.tavily_search.models import SearchDepth, Topic
 from utils import asyncify
 
 

@@ -10,7 +10,7 @@ from services.genai.client import get_client
 _chats: dict[str, Chat] = {}
 
 
-def _get_chat_id(agent_id: str) -> str:
+def _create_chat_id(agent_id: str) -> str:
     return f"{agent_id}_{date.today().isoformat()}"
 
 
@@ -24,8 +24,6 @@ def _get_date_from_chat_id(chat_id: str) -> date | None:
 
 
 def _clear_old_chats():
-    global _chats
-
     expired_chat_ids = [i for i in _chats if _get_date_from_chat_id(i) != date.today()]
     for chat_id in expired_chat_ids:
         logging.info(f"Clearing expired chat session: {chat_id}")
@@ -38,9 +36,7 @@ def get_or_create_chat(
     config: types.GenerateContentConfig,
     is_single_use: bool = False,
 ) -> Chat:
-    global _chats
-
-    chat_id = _get_chat_id(agent_id)
+    chat_id = _create_chat_id(agent_id)
 
     if not _chats.get(chat_id) or is_single_use:
         logging.info(f"Creating new chat session for agent '{agent_id}'")
@@ -57,7 +53,7 @@ async def ask(
     system_prompt: str,
     document_context: list[str] = Field(default_factory=list),
 ) -> str:
-    logging.debug(f"Ask Google GenAi: {user_prompt}")
+    logging.info(f"Asking Gemini: {user_prompt}")
 
     response = await asyncio.to_thread(
         get_client().models.generate_content,

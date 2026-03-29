@@ -18,12 +18,12 @@ def rename_log_file(task_id: str, state: str) -> Path:
     return completed_log_file
 
 
-def log_task_input(user_message: str, task_id: str) -> None:
+def log_task_input(user_query: str, task_id: str) -> None:
     log_file = _get_or_create_log_file(task_id)
     with open(log_file, "a") as f:
         f.write(f"TIMESTAMP: {datetime.now().isoformat()}\n")
         f.write(f"TASK ID: {task_id}\n")
-        f.write(f"USER MESSAGE: \n{user_message}\n\n")
+        f.write(f"USER MESSAGE: \n{user_query}\n\n")
         f.write("-" * 40 + "\n\n")
 
 

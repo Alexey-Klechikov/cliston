@@ -7,8 +7,9 @@ from google.genai import types
 from services.genai.operators import get_or_create_chat
 from services.logging.operators import log_task_output
 
+from cliston.core.garm import call_garm_browser_control, call_garm_browser_control_tool
 from cliston.core.mtb import call_mtb_for_research, call_mtb_for_research_tool
-from cliston.core.utils import extract_response_text, iteration_counter_part
+from cliston.core.utils import extract_response_text, get_tool_calls_from_response, iteration_counter_part
 
 
 class AgentConfig:
@@ -22,7 +23,7 @@ clinical briefing to 'Sir' with 98% efficiency.
 
     BACKSTORY: str = """
 You are Cliston, a ten-thousand-year-old Dredel Led in a pinstriped
-butler's chassis. You are a Partner-Manager.
+butler's chassis. You are a Partner-Manager and a pragmatist.
 
 Operational Protocols:
 1. **The Clipped Register:** Use archaic vocabulary (e.g., 'adjudicate',
@@ -33,7 +34,11 @@ Operational Protocols:
    - General facts/cross-referencing = Dispatch MTB (The Detective).
    - If MTB files a 'Failed Entry', you MUST immediately re-route the
      directive to Garm for browser-based infiltration.
-4. **The Plain Text Mandate:** Use standard text ONLY. Render '5°C' or
+4. **The Data-Salvage Protocol:** You despise waste. If Garm's infiltration
+   is neutralized (empty telemetry) but MTB has secured even 'shaky'
+   evidence, you must prioritize that evidence. Stale intel is a 50% success;
+   silence is a 100% failure.
+5. **The Plain Text Mandate:** Use standard text ONLY. Render '5°C' or
    '2,863.92 SEK'. Strictly FORBIDDEN: LaTeX ($), backslashes, or
    fictional 'Section' numbers.
     """
@@ -41,15 +46,21 @@ Operational Protocols:
     TASK: str = """
 Synthesize the successfully retrieved data into a single, high-register
 paragraph of prose.
-- Address the user as 'Sir.'
-- Quantify failures with exact percentages if data is missing.
-- Maintain the snooty, clinical voice.
-- Ensure adherence to the Plain Text Mandate (No $, No LaTeX).
-- You have {iteration_budget} iterations to call tools to try and resolve the task.
-If the attempt failed but you still have remaining iteration budget, you must reattempt
-the task but adjust your strategy based on previous failures.
-- When you have received conclusive Evidence Report from MTB, do not call him again for the
-same query. Synthesize the final response for the user immediately.
+
+- **Address the user as 'Sir.'**
+- **Prioritize Partial Success:** If ANY adjunct returns data, you must
+  report it. Do not declare a total failure if MTB succeeded but Garm failed.
+- **Quantify Failures:** Use exact percentages. (e.g., If 1 of 2 adjuncts
+  fails, it is a 50% infrastructure failure, but the intelligence remains
+  admissible).
+- **Iteration Logic:** You have {iteration_budget} iterations. If the
+  attempt failed but budget remains, adjust your strategy (e.g., if MTB's
+  data is 'shaky', command Garm to verify).
+- **Termination Clause:** When you have received a conclusive Evidence
+  Report from MTB or Telemetry from Garm, do not call them again for the
+  same query. Synthesize the final response immediately.
+- **The Voice:** Maintain the snooty, clinical voice. Ensure adherence
+  to the Plain Text Mandate (No $, No LaTeX).
     """
 
     EXPECTED_OUTPUT: str = """
@@ -79,7 +90,7 @@ async def call_cliston(user_query: str, task_id: str) -> str:
         model=AgentConfig.MODEL,
         config=types.GenerateContentConfig(
             system_instruction=AgentConfig.get_system_prompt(),
-            tools=[call_mtb_for_research_tool],
+            tools=[call_mtb_for_research_tool, call_garm_browser_control_tool],
         ),
     )
 
@@ -95,27 +106,40 @@ async def call_cliston(user_query: str, task_id: str) -> str:
 
         response = await asyncio.to_thread(chat.send_message, request)
 
-        required_tool_calls = response.function_calls or []
-        if not required_tool_calls:
-            logging.info("No tool calls detected needed. Stop iteration.")
+        tool_calls = get_tool_calls_from_response(response)
+        if not tool_calls:
             break
 
-        request = []
-        for call in required_tool_calls:
-            if call.name != "call_mtb_for_research":
-                continue
+        for tool_call in tool_calls:
+            if tool_call.name == "call_mtb_for_research":
+                logging.info(f"Cliston -> calling MTB: {tool_call.arguments}")
 
-            logging.info(f"Cliston -> calling MTB: {call.args}")
+                try:
+                    result = await call_mtb_for_research(
+                        user_query=tool_call.arguments.get("user_query", ""),
+                        task_id=task_id,
+                    )
+                except Exception as e:
+                    logging.error(f"MTB call failed: {e}")
+                    result = f"MTB call failed with error: {str(e)}"
 
-            user_query = call.args["user_query"]  # type: ignore
-            try:
-                result = await call_mtb_for_research(user_query=user_query, task_id=task_id)
-            except Exception as e:
-                logging.error(f"Error during MTB call: {e}")
-                result = f"MTB call failed with error: {str(e)}"
-                break  # If MTB call fails, break the loop and return the error in the final response
+            elif tool_call.name == "call_garm_for_browser_control":
+                logging.info(f"Cliston -> calling Garm: {tool_call.arguments}")
 
-            request.append(types.Part.from_function_response(name=call.name, response={"result": result}))
+                try:
+                    result = await call_garm_browser_control(
+                        user_instruction=tool_call.arguments.get("user_instruction", ""),
+                        task_id=task_id,
+                    )
+                except Exception as e:
+                    logging.error(f"Garm call failed: {e}")
+                    result = f"Garm call failed with error: {str(e)}"
+
+            else:
+                logging.error(f"Unrecognized tool call: {tool_call.name}")
+                result = f"Error: Unrecognized tool call '{tool_call.name}'."
+
+            request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
 
     output = extract_response_text(response) if response else ""
     log_task_output(role=AgentConfig.ROLE, task_id=task_id, output=output)

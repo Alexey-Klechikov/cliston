@@ -1,4 +1,14 @@
+import asyncio
+import logging
+
 from config import ModelConfig
+from google.genai import types
+from services.genai.operators import get_or_create_chat
+from services.logging.operators import log_task_output
+from services.playwright_browser.operators import browser_inspect, browser_interact, browser_navigate, close_browser
+from services.playwright_browser.tools import playwright_browser_tool
+
+from cliston.core.utils import extract_response_text, get_tool_calls_from_response, iteration_counter_part
 
 
 class AgentConfig:
@@ -45,6 +55,8 @@ and 'untrusted.'
 Raw, timestamped telemetry extracted directly from the browser DOM.
     """
 
+    STEPS_BUDGET: int = 10
+
     MODEL: str = ModelConfig.FAST_GEMINI_MODEL
 
     @staticmethod
@@ -58,3 +70,88 @@ Raw, timestamped telemetry extracted directly from the browser DOM.
                 f"EXPECTED OUTPUT:\n{AgentConfig.EXPECTED_OUTPUT}",
             ],
         )
+
+
+async def call_garm_browser_control(user_instruction: str, task_id: str) -> str:
+    chat = get_or_create_chat(
+        agent_id=AgentConfig.ROLE,
+        model=AgentConfig.MODEL,
+        config=types.GenerateContentConfig(
+            system_instruction=AgentConfig.get_system_prompt(),
+            tools=[playwright_browser_tool],
+        ),
+    )
+
+    response: types.GenerateContentResponse | None = None
+    request = [types.Part.from_text(text=i) for i in [f"USER_QUERY: {user_instruction}"]]
+
+    try:
+        for i in range(AgentConfig.STEPS_BUDGET + 1):  # +1 to allow for one extra iteration after budget is exhausted
+            logging.info(f"Garm iteration: {i + 1}")
+
+            request.append(iteration_counter_part(i + 1, AgentConfig.STEPS_BUDGET))
+
+            response = await asyncio.to_thread(chat.send_message, request)
+
+            tool_calls = get_tool_calls_from_response(response)
+            if not tool_calls:
+                break
+
+            for tool_call in tool_calls:
+                if tool_call.name == "browser_navigate":
+                    result = await browser_navigate(url=tool_call.arguments.get("url"))
+
+                elif tool_call.name == "browser_interact":
+                    result = await browser_interact(
+                        action=tool_call.arguments.get("action"),
+                        selector=tool_call.arguments.get("selector"),
+                        value=tool_call.arguments.get("value"),
+                    )
+
+                elif tool_call.name == "browser_inspect":
+                    result = await browser_inspect()
+
+                else:
+                    result = f"Error: Unrecognized tool call '{tool_call.name}'."
+
+                request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
+
+    finally:
+        # CRITICAL: Close the browser after the task is done
+        await close_browser()
+
+    output = (
+        extract_response_text(response)
+        if response
+        else "STATUS: Infiltration Failed. Infrastructure neutralized Garm via bot-check. 0% telemetry retrieved."
+    )
+    log_task_output(role=AgentConfig.ROLE, task_id=task_id, output=output)
+
+    return output
+
+
+call_garm_browser_control_tool = types.Tool(
+    function_declarations=[
+        types.FunctionDeclaration(
+            name="call_garm_for_browser_control",
+            description=(
+                "Call this for direct browser-based surveillance, UI interaction, or "
+                "extracting live telemetry from specific websites like Avanza. "
+                "Garm is an infiltrator who bypasses UI hurdles to get raw data."
+            ),
+            parameters_json_schema={
+                "type": "object",
+                "properties": {
+                    "user_instruction": {
+                        "type": "string",
+                        "description": (
+                            "The specific browser directive, e.g., 'Go to avanza.se, "
+                            "search for OMXS30 and return the price.'"
+                        ),
+                    },
+                },
+                "required": ["user_instruction"],
+            },
+        ),
+    ],
+)
