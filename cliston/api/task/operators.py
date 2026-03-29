@@ -26,15 +26,15 @@ def _build_safe_generic_reply(user_message: str) -> str:
     )
 
 
-def register_task(task_id: str) -> None:
+def _register_task(task_id: str) -> None:
     _task_results[task_id] = TaskExecutionResult(task_id=task_id, status="running")
 
 
-def get_task_result(task_id: str) -> TaskExecutionResult | None:
+def handle_get_task(task_id: str) -> TaskExecutionResult | None:
     return _task_results.get(task_id)
 
 
-async def process_message_background(user_message: str, task_id: str) -> None:
+async def handle_execute_task(user_message: str, task_id: str) -> None:
     """
     Directly calls the Cliston Orchestrator.
     Cliston handles the delegation to MTB internally.
@@ -43,7 +43,7 @@ async def process_message_background(user_message: str, task_id: str) -> None:
 
     task_state = _task_results.get(task_id)
     if task_state is None:
-        register_task(task_id)
+        _register_task(task_id)
         task_state = _task_results[task_id]
 
     try:
