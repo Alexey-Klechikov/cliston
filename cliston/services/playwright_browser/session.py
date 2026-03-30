@@ -11,8 +11,16 @@ class BrowserSession:
     async def get_page(self) -> Page:
         if self.page is None:
             self.pw = await async_playwright().start()
-            # headless=False is helpful for debugging/watching Garm work
-            self.browser = await self.pw.chromium.launch(headless=True)
+            # Launch browser with resource constraints for stability
+            self.browser = await self.pw.chromium.launch(
+                headless=False,
+                args=[
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-extensions",
+                ],
+            )
             self.context = await self.browser.new_context()
             self.page = await self.context.new_page()
         return self.page
