@@ -1,6 +1,6 @@
 import logging
 
-from services.playwright_browser.session import BrowserSession
+from services.playwright.session import BrowserSession
 
 _browser_session = BrowserSession()
 

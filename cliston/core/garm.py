@@ -5,8 +5,8 @@ from config import ModelConfig
 from google.genai import types
 from services.genai.operators import get_or_create_chat
 from services.logging.operators import log_task_output
-from services.playwright_browser.operators import browser_inspect, browser_interact, browser_navigate, close_browser
-from services.playwright_browser.tools import playwright_browser_tool
+from services.playwright.operators import browser_inspect, browser_interact, browser_navigate, close_browser
+from services.playwright.tools import playwright_browser_tool
 
 from cliston.core.utils import extract_response_text, get_tool_calls_from_response, iteration_counter_part
 
