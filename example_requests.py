@@ -35,11 +35,9 @@ REACTION = ReactionEmoji.THUMBS_UP
 
 # Task
 # TASK_MESSAGE="How are you Cliston?"
-TASK_MESSAGE = "Find me the latest price of OMXS30 index"
+TASK_MESSAGE = "Find me the latest price of OMX30 using www.avanza.se."
 # TASK_MESSAGE = "Tell me the weather in Stockholm right now"
 # TASK_MESSAGE = "Explain to me what Active Share is"
-# TASK_MESSAGE = "Do the following actions in the browser: Access 'www.avanza.se', search for
-# 'OMXS30', and tell me the latest price and 1-day price change in percentage"
 
 TASK_POLL_INTERVAL_SECONDS = 20.0
 TASK_POLL_TIMEOUT_SECONDS = 180.0
@@ -53,7 +51,6 @@ async def ping_telegram() -> None:
         result = await get_chat_updates()
         for update in result:
             print(json.dumps(update.model_dump(mode="json"), indent=2))
-
     elif MODE == "chats":
         result = await list_chats()
         for chat in result:

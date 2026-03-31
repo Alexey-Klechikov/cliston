@@ -7,12 +7,17 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ModelConfig:
-    SUPERIOR_GEMINI_MODEL = "gemini-2.5-flash"
-    ACCURATE_GEMINI_MODEL = "gemini-2.5-flash-lite"
+    SUPERIOR_GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
     FAST_GEMINI_MODEL = "gemini-2.5-flash-lite"
 
     TEMPERATURE = 0.2
     TOP_P = 0.7
+
+
+class DatabaseConfig:
+    DB_DIR = Path(DATA_DIR) / "tables"
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH_GARM_INTELLIGENCE = DB_DIR / "garm_intelligence.db"
 
 
 class TaskExecutionConfig:

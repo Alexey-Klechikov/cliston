@@ -8,6 +8,7 @@ from services.genai.operators import get_or_create_chat
 from services.logging.operators import log_task_output
 
 from cliston.core.garm import call_garm_browser_control, call_garm_browser_control_tool
+from cliston.core.models import ToolCall
 from cliston.core.mtb import call_mtb_for_research, call_mtb_for_research_tool
 from cliston.core.utils import extract_response_text, get_tool_calls_from_response, iteration_counter_part
 
@@ -74,7 +75,7 @@ Brief, clinical, and snooty final briefing.
 
     ITERATION_BUDGET: int = 3
 
-    MODEL: str = ModelConfig.SUPERIOR_GEMINI_MODEL
+    MODEL: str = ModelConfig.FAST_GEMINI_MODEL
 
     @staticmethod
     def get_system_prompt() -> str:
@@ -87,6 +88,46 @@ Brief, clinical, and snooty final briefing.
                 f"EXPECTED OUTPUT:\n{AgentConfig.EXPECTED_OUTPUT}",
             ],
         )
+
+
+async def _process_tools_calls(
+    request: list[types.Part],
+    tool_calls: list[ToolCall],
+    task_id: str,
+) -> list[types.Part]:
+    for tool_call in tool_calls:
+        if tool_call.name == "call_mtb_for_research":
+            logging.info(f"Cliston -> calling MTB: {tool_call.arguments}")
+
+            try:
+                result = await call_mtb_for_research(
+                    user_query=tool_call.arguments.get("user_query", ""),
+                    task_id=task_id,
+                )
+            except Exception as e:
+                logging.error(f"MTB call failed: {e}")
+                result = f"MTB call failed with error: {str(e)}"
+
+        elif tool_call.name == "call_garm_for_browser_control":
+            logging.info(f"Cliston -> calling Garm: {tool_call.arguments}")
+
+            try:
+                result = await call_garm_browser_control(
+                    domain=tool_call.arguments.get("domain", ""),
+                    objective=tool_call.arguments.get("objective", ""),
+                    task_id=task_id,
+                )
+            except Exception as e:
+                logging.error(f"Garm call failed: {e}")
+                result = f"Garm call failed with error: {str(e)}"
+
+        else:
+            logging.error(f"Unrecognized tool call: {tool_call.name}")
+            result = f"Error: Unrecognized tool call '{tool_call.name}'."
+
+        request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
+
+    return request
 
 
 async def call_cliston(user_query: str, task_id: str) -> str:
@@ -103,11 +144,10 @@ async def call_cliston(user_query: str, task_id: str) -> str:
     request = [
         types.Part.from_text(text=i) for i in [f"USER_QUERY: {user_query}", f"Current datetime: {str(datetime.now())}"]
     ]
+    request.append(iteration_counter_part(1, AgentConfig.ITERATION_BUDGET))
 
-    for i in range(AgentConfig.ITERATION_BUDGET + 1):  # +1 to allow for one extra iteration after budget is exhausted
+    for i in range(AgentConfig.ITERATION_BUDGET + 2):
         logging.info(f"Cliston iteration: {i + 1}")
-
-        request.append(iteration_counter_part(i + 1, AgentConfig.ITERATION_BUDGET))
 
         response = await asyncio.to_thread(chat.send_message, request)
 
@@ -115,38 +155,11 @@ async def call_cliston(user_query: str, task_id: str) -> str:
         if not tool_calls:
             break
 
-        for tool_call in tool_calls:
-            if tool_call.name == "call_mtb_for_research":
-                logging.info(f"Cliston -> calling MTB: {tool_call.arguments}")
+        request = [iteration_counter_part(i + 2, AgentConfig.ITERATION_BUDGET)]
+        request = await _process_tools_calls(request, tool_calls, task_id)
 
-                try:
-                    result = await call_mtb_for_research(
-                        user_query=tool_call.arguments.get("user_query", ""),
-                        task_id=task_id,
-                    )
-                except Exception as e:
-                    logging.error(f"MTB call failed: {e}")
-                    result = f"MTB call failed with error: {str(e)}"
+    output = extract_response_text(response)
 
-            elif tool_call.name == "call_garm_for_browser_control":
-                logging.info(f"Cliston -> calling Garm: {tool_call.arguments}")
-
-                try:
-                    result = await call_garm_browser_control(
-                        user_instruction=tool_call.arguments.get("user_instruction", ""),
-                        task_id=task_id,
-                    )
-                except Exception as e:
-                    logging.error(f"Garm call failed: {e}")
-                    result = f"Garm call failed with error: {str(e)}"
-
-            else:
-                logging.error(f"Unrecognized tool call: {tool_call.name}")
-                result = f"Error: Unrecognized tool call '{tool_call.name}'."
-
-            request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
-
-    output = extract_response_text(response) if response else ""
     log_task_output(role=AgentConfig.ROLE, task_id=task_id, output=output)
 
     return output

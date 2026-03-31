@@ -4,9 +4,12 @@ from core.models import ToolCall
 from google.genai import types
 
 
-def extract_response_text(response: types.GenerateContentResponse) -> str:
+def extract_response_text(response: types.GenerateContentResponse | None) -> str:
+    if response is None:
+        return ""
+
     candidates = response.candidates or []
-    text_parts: list[str] = []
+    text_parts: list[str | dict] = []
 
     for candidate in candidates:
         content = candidate.content
@@ -14,10 +17,13 @@ def extract_response_text(response: types.GenerateContentResponse) -> str:
             continue
         for part in content.parts or []:
             text = part.text
-            if isinstance(text, str) and text:
-                text_parts.append(text)
 
-    return "\n".join(text_parts).strip()
+            if not text:
+                continue
+
+            text_parts.append(text)
+
+    return "\n".join(map(str, text_parts))
 
 
 def get_tool_calls_from_response(response: types.GenerateContentResponse) -> list[ToolCall]:

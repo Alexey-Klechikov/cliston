@@ -5,7 +5,7 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 # Add parent directory to path to allow imports
@@ -59,6 +59,24 @@ app.include_router(rag_router)
 async def general_exception_handler(_, exc):
     logging.error(f"Uncaught exception: {exc}", exc_info=True)
     return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"error": "Internal server error"})
+
+
+@app.middleware("http")
+async def catch_unhandled_exceptions(request: Request, call_next):
+    try:
+        logging.info("-" * 20)
+
+        return await call_next(request)
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        logging.error("Unhandled request error: %s", exc, exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "Internal server error"},
+        )
 
 
 def main():
