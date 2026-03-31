@@ -9,44 +9,87 @@ async def close_browser():
     await _browser_session.close()
 
 
-async def browser_inspect() -> str:
-    logging.info("Inspecting the current page content")
+async def browser_inspect() -> tuple[bytes, str]:
+    """
+    Captures tactical telemetry: A compressed screenshot for vision
+    and a filtered list of interactive elements for precise data extraction.
+    """
+    logging.info("Garm: Executing visual and textual reconnaissance.")
 
     page = await _browser_session.get_page()
-    # Extract both innerText and innerHTML for better debugging
-    content_text = await page.evaluate(
-        """() => {
-        return document.body.innerText.substring(0, 5000);
-    }""",
-    )
-    content_html = await page.evaluate(
-        """() => {
-        return document.body.innerHTML.substring(0, 5000);
-    }""",
+
+    # Capture Vision (Screenshot)
+    screenshot_bytes = await page.screenshot(type="jpeg", quality=50, full_page=False)
+
+    # Capture Interactive Elements (Filtered DOM)
+    interactive_elements = await page.evaluate(
+        """
+        () => {
+            const elements = Array.from(document.querySelectorAll('button, input, a, select, [role="button"]'))
+                .map(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        return {
+                            tag: el.tagName,
+                            text: el.innerText || el.placeholder || el.ariaLabel,
+                            id: el.id,
+                            class: el.className,
+                            type: el.type
+                        };
+                    }
+                }).filter(Boolean);
+            return JSON.stringify(elements);
+        }
+        """,
     )
 
-    # # Optionally capture a screenshot for visual debugging
-    # screenshot_path = "page_screenshot.png"
-    # await page.screenshot(path=screenshot_path)
-
-    return f"Current Page Content (Text): {content_text}\nCurrent Page Content (HTML): {content_html}"
+    return (
+        screenshot_bytes,
+        f"Interactive DOM Elements: {interactive_elements}",
+    )
 
 
 async def browser_navigate(url: str | None) -> str:
     logging.info(f"Navigating to {url}")
 
     if not url:
-        return "Error: URL is required."
+        return "Error: URL is required for infiltration."
 
     page = await _browser_session.get_page()
-    try:
-        # Set a shorter timeout for navigation
-        await page.goto(url, wait_until="domcontentloaded", timeout=8000)
-    except Exception as e:
-        return f"Error: Navigation to {url} failed due to timeout or other issue: {str(e)}"
 
-    # We return the new URL and title so Garm knows he moved
-    return f"Successfully reached {page.url}. Page Title: {await page.title()}"
+    try:
+        await page.goto(url, wait_until="networkidle", timeout=10000)
+    except Exception as e1:
+        logging.warning(f"Networkidle failed for {url}, attempting soft load...")
+        try:
+            await page.wait_for_load_state("load", timeout=5000)
+        except Exception as e2:
+            return f"Infiltration Failure: {url} is unresponsive or protected. {str(e1)} | {str(e2)}"
+
+    obstructions = [
+        "button:has-text('Accepter')",
+        "button:has-text('Godkänn')",
+        "button:has-text('Accept')",
+        "#cookie-accept",
+        ".modal-close",
+        "button:has-text('Accept All')",
+        "#popup-close",
+        ".newsletter-modal .close",
+    ]
+    for selector in obstructions:
+        try:
+            if await page.is_visible(selector, timeout=1000):
+                await page.click(selector)
+                logging.info(f"Neutralized obstruction: {selector}")
+        except Exception:
+            continue
+
+    current_url = page.url
+    page_title = await page.title()
+
+    return (
+        f"Infiltration Successful. Currently at: {current_url}. " f"Title: {page_title}. UI is clear for interaction."
+    )
 
 
 async def browser_interact(action: str | None, selector: str | None, value: str | None = None) -> str:
@@ -57,8 +100,16 @@ async def browser_interact(action: str | None, selector: str | None, value: str 
 
     page = await _browser_session.get_page()
     try:
-        # Wait for the selector to be visible before interacting
-        await page.wait_for_selector(selector, timeout=5000)
+        # TACTICAL WAIT: Ensure the element is present and visible
+        # We catch the timeout specifically to give Garm better 'Eyes'
+        try:
+            await page.wait_for_selector(selector, state="visible", timeout=5000)
+        except Exception:
+            return (
+                f"Tactical Failure: Selector '{selector}' is not visible or not in the DOM. "
+                "It may be hidden behind a button (like a search icon) or a menu. "
+                "Use 'browser_inspect' to find the trigger element and click it first."
+            )
 
         if action == "click":
             await page.click(selector, timeout=3000)
@@ -77,12 +128,14 @@ async def browser_interact(action: str | None, selector: str | None, value: str 
         else:
             return f"Error: Unrecognized action '{action}'. Supported actions are 'click', 'type', and 'keypress'."
 
-        # Wait for potential redirects or AJAX
+        # 2. POST-ACTION STABILIZATION
         try:
-            await page.wait_for_load_state("domcontentloaded", timeout=3000)
+            await page.wait_for_load_state("networkidle", timeout=2000)
         except Exception:
-            pass
+            await page.wait_for_load_state("domcontentloaded", timeout=2000)
 
         return f"Success: {action} on {selector}. Current URL: {page.url}"
+
     except Exception as e:
-        return f"Error during {action}: {str(e)}"
+        logging.error(f"Error during {action} on {selector}: {str(e)}")
+        return f"Infrastructure Error during {action}: {str(e)}"

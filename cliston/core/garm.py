@@ -43,25 +43,31 @@ as a weapon of war to bypass 'red tape' (paywalls/bot detection).
 
 5. **No Meta-Analysis:** Do not explain your code or your actions.
 Just deliver the 'Closing Scene' report.
+
+6. **The Cartographer:** Every successful infiltration must yield a 'Tactical Execution Manual.'
+Document the exact CSS selectors, triggers, and wait-times required to bypass
+the UI 'red tape.' If a sidebar needs to be clicked before a search-input
+appears, map that sequence for future bureaucratic efficiency.
     """
 
     TASK: str = """
-Utilize your StagehandTool to infiltrate 'https://www.avanza.se'.
-- **MANDATORY:** You must physically navigate the browser to the URL.
-- **FORBIDDEN:** Do not use 'Evidence Reports' or data from MTB. That data is 'stale'
-and 'untrusted.'
-- Search for 'OMXS30' using the site's search bar and extract the LIVE price.
-- If you encounter a login screen or bot-check, attempt to bypass or report the specific
-'Infrastructure Failure.'
+Utilize your StagehandTool to infiltrate web sites.
+- **MANDATORY:** Navigate to the URL and extract LIVE price for 'OMXS30'.
+- **DOCUMENTATION:** Create a step-by-step 'Infiltration Manual' based on your
+successful actions. Identify the specific selectors (IDs/Classes/Attributes)
+that worked.
+- **FORBIDDEN:** Do not trust MTB's stale data.
     """
 
     EXPECTED_OUTPUT: str = """
-Raw, timestamped telemetry extracted directly from the browser DOM.
+1. LIVE Telemetry: Timestamped price and change percentage.
+2. Tactical Execution Manual: A precise, step-by-step technical guide
+(Selectors + Actions) for re-entry.
     """
 
-    STEPS_BUDGET: int = 10
+    STEPS_BUDGET: int = 20
 
-    MODEL: str = ModelConfig.FAST_GEMINI_MODEL
+    MODEL: str = ModelConfig.ACCURATE_GEMINI_MODEL
 
     @staticmethod
     def get_system_prompt() -> str:
@@ -101,27 +107,30 @@ async def call_garm_browser_control(user_instruction: str, task_id: str) -> str:
             if not tool_calls:
                 break
 
+            result_str = None
+            result_screenshot_bytes = None
             for tool_call in tool_calls:
                 if tool_call.name == "browser_navigate":
-                    result = await browser_navigate(url=tool_call.arguments.get("url"))
-
+                    result_str = await browser_navigate(url=tool_call.arguments.get("url"))
                 elif tool_call.name == "browser_interact":
-                    result = await browser_interact(
+                    result_str = await browser_interact(
                         action=tool_call.arguments.get("action"),
                         selector=tool_call.arguments.get("selector"),
                         value=tool_call.arguments.get("value"),
                     )
-
                 elif tool_call.name == "browser_inspect":
-                    result = await browser_inspect()
-
+                    result_screenshot_bytes, result_str = await browser_inspect()
                 else:
-                    result = f"Error: Unrecognized tool call '{tool_call.name}'."
+                    result_str = f"Error: Unrecognized tool call '{tool_call.name}'."
 
-                request.append(types.Part.from_function_response(name=tool_call.name, response={"result": result}))
+                if result_screenshot_bytes is not None:
+                    request.append(types.Part.from_bytes(data=result_screenshot_bytes, mime_type="image/jpeg"))
+                if result_str is not None:
+                    request.append(
+                        types.Part.from_function_response(name=tool_call.name, response={"result": result_str}),
+                    )
 
     finally:
-        # CRITICAL: Close the browser after the task is done
         await close_browser()
 
     output = (
