@@ -3,9 +3,8 @@ import logging
 from uuid import uuid4
 
 from api.task.models import TaskState
+from core.cliston.agent import call_cliston
 from services.logging.operators import log_task_input, rename_log_file
-
-from cliston.core.cliston import call_cliston
 
 _task_states: dict[str, TaskState] = {}
 

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from config import DocumentConfig
+from data import BOOKS_DIR_PATH
 from services.document.chunker import DocumentChunker
 from services.document.models import Chunk, Document
 from services.document.parser import SUPPORTED_EXTENSIONS, ParserFactory
@@ -10,7 +10,7 @@ from utils import asyncify
 
 class DocumentLoader:
     def __init__(self, chunker: DocumentChunker | None = None):
-        self.resources_dir = DocumentConfig.BOOKS_DIR_PATH
+        self.resources_dir = BOOKS_DIR_PATH
         self.chunker = chunker or DocumentChunker()
         logging.info("Initialized DocumentLoader")
 

@@ -1,23 +1,11 @@
 import os
 from pathlib import Path
 
-from data import DATA_DIR
-
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ModelConfig:
-    SUPERIOR_GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
-    FAST_GEMINI_MODEL = "gemini-2.5-flash-lite"
-
-    TEMPERATURE = 0.2
-    TOP_P = 0.7
-
-
-class DatabaseConfig:
-    DB_DIR = Path(DATA_DIR) / "tables"
-    DB_DIR.mkdir(parents=True, exist_ok=True)
-    DB_PATH_GARM_INTELLIGENCE = DB_DIR / "garm_intelligence.db"
+    ASK_GEMINI_MODEL = "gemini-3.1-flash-lite-preview"
 
 
 class TaskExecutionConfig:
@@ -35,9 +23,6 @@ class EmbedderConfig:
 
 
 class DocumentConfig:
-    BOOKS_DIR_PATH = Path(DATA_DIR) / "books"
-    BOOKS_DIR_PATH.mkdir(parents=True, exist_ok=True)
-
     # Chunk size in characters
     CHUNK_SIZE = 1500
     CHUNK_OVERLAP = 150
@@ -47,9 +32,6 @@ class DocumentConfig:
 
 
 class VectorConfig:
-    VECTORSTORE_DIR_PATH = Path(DATA_DIR) / "vectorstore"
-    VECTORSTORE_DIR_PATH.mkdir(parents=True, exist_ok=True)
-
     COLLECTION_NAME_BOOKS = "books"
 
     # Retrieval parameters (number of chunks to retrieve for a query)

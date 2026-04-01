@@ -1,7 +1,8 @@
 import logging
 
-from core.models import ToolCall
 from google.genai import types
+
+from cliston.core.models import ToolCall
 
 
 def extract_response_text(response: types.GenerateContentResponse | None) -> str:

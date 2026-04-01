@@ -1,11 +1,11 @@
 from datetime import datetime
 from pathlib import Path
 
-from config import TaskExecutionConfig
+from logs import TASK_LOGS_DIR_PATH
 
 
 def _get_or_create_log_file(task_id: str) -> Path:
-    log_file = TaskExecutionConfig.TASK_LOG_DIR / f"{task_id}.txt"
+    log_file = TASK_LOGS_DIR_PATH / f"{task_id}.txt"
     if not log_file.exists():
         log_file.touch()
     return log_file

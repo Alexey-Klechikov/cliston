@@ -6,6 +6,7 @@ from typing import Any
 import chromadb
 import numpy as np
 from config import VectorConfig
+from data import VECTORSTORE_DIR_PATH
 from services.document.models import Chunk, ChunkMetadata
 from services.embedder.client import EmbeddingService
 from services.vectors.models import ChunksTracker
@@ -20,7 +21,7 @@ class VectorStore:
     ):
         self.collection_name = collection_name
         self.embedding_service = embedding_service or EmbeddingService()
-        self.vector_store_dir = VectorConfig.VECTORSTORE_DIR_PATH
+        self.vector_store_dir = VECTORSTORE_DIR_PATH
 
         # Initialize Chroma client
         self.client = chromadb.PersistentClient(

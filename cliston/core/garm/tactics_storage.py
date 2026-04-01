@@ -3,33 +3,48 @@ import logging
 from datetime import UTC, datetime
 
 import aiosqlite
-from config import DatabaseConfig
-from services.sql.models import TacticalManual
+from data import DB_PATH_GARM_INTELLIGENCE
+
+from cliston.core.garm.models import TacticalManual
 
 
 class TacticsStorage:
-    def __init__(self):
-        self.db_path = str(DatabaseConfig.DB_PATH_GARM_INTELLIGENCE)
+    _initialized: bool = False
+    _initialize_lock = asyncio.Lock()
 
-        asyncio.create_task(self._initialize())
+    def __init__(self):
+        self.db_path = str(DB_PATH_GARM_INTELLIGENCE)
+
+    async def _ensure_initialized(self):
+        if self._initialized:
+            return
+
+        async with self._initialize_lock:
+            if self._initialized:
+                return
+
+            await self._initialize()
+            self._initialized = True
 
     async def _initialize(self):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS tactical_manuals (
-                    domain TEXT PRIMARY KEY,
-                    objective TEXT,
+                    domain TEXT NOT NULL,
+                    objective TEXT NOT NULL,
                     manual TEXT,
                     success_count INTEGER DEFAULT 0,
                     failure_count INTEGER DEFAULT 0,
-                    last_updated TIMESTAMP
+                    last_updated TIMESTAMP,
+                    PRIMARY KEY (domain, objective)
                 )
             """,
             )
             await db.commit()
 
     async def get_manuals(self, domain: str) -> list[TacticalManual]:
+        await self._ensure_initialized()
         domain = domain.lower().replace("www.", "").strip()
 
         async with aiosqlite.connect(self.db_path) as db:
@@ -47,7 +62,9 @@ class TacticsStorage:
                         manual=row["manual"],
                         success_count=row["success_count"],
                         failure_count=row["failure_count"],
-                        last_updated=datetime.fromisoformat(row["last_updated"]),
+                        last_updated=(
+                            datetime.fromisoformat(row["last_updated"]) if row["last_updated"] else datetime.now(UTC)
+                        ),
                     )
                     for row in rows
                 ]
@@ -57,15 +74,27 @@ class TacticsStorage:
 
     async def archive_manual(self, manual: TacticalManual) -> None:
         """Save a newly drafted manual from Garm's infiltration."""
+        await self._ensure_initialized()
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
-                INSERT OR REPLACE INTO tactical_manuals
+                INSERT INTO tactical_manuals
                 (domain, objective, manual, last_updated, success_count, failure_count)
-                VALUES (?, ?, ?, ?, 1, 0)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(domain, objective)
+                DO UPDATE SET
+                    manual = excluded.manual,
+                    last_updated = excluded.last_updated
             """,
-                (manual.domain, manual.objective, manual.manual, datetime.now(UTC).isoformat()),
+                (
+                    manual.domain,
+                    manual.objective,
+                    manual.manual,
+                    datetime.now(UTC).isoformat(),
+                    manual.success_count,
+                    manual.failure_count,
+                ),
             )
 
             await db.commit()
@@ -73,6 +102,7 @@ class TacticsStorage:
 
     async def update_reliability(self, manual: TacticalManual, success: bool):
         """Adjudicate the outcome of a manual execution."""
+        await self._ensure_initialized()
 
         async with aiosqlite.connect(self.db_path) as db:
             field = ("success" if success else "failure") + "_count"

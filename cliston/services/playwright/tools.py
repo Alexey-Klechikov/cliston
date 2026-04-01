@@ -13,7 +13,11 @@ playwright_browser_tool = types.Tool(
         ),
         types.FunctionDeclaration(
             name="browser_interact",
-            description="Perform an action like click, type, or scroll on the current page.",
+            description=(
+                "Perform an action like click, type, or keypress on the current page. "
+                "For selector, prefer CSS from browser_inspect suggested_selector. "
+                "Plain tokens like 'search-input' are also accepted and auto-resolved."
+            ),
             parameters_json_schema={
                 "type": "object",
                 "properties": {
