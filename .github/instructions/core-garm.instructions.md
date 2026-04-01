@@ -4,7 +4,8 @@ applyTo: "cliston/core/garm/**"
 
 # Garm Agent — Coding Instructions
 
-Garm is the **browser automation** sub-agent. It uses Playwright Firefox to infiltrate websites, and maintains a per-domain SQLite database of reusable "Tactical Manuals".
+Garm is the **browser automation** sub-agent. It is stateless and receives a fresh chat session on every call.
+It uses Playwright Firefox to infiltrate websites, and maintains a per-domain SQLite database of reusable "Tactical Manuals".
 
 ## Structure
 

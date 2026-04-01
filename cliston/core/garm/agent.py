@@ -149,6 +149,7 @@ async def call_garm_browser_control(domain: str, objective: str, task_id: str) -
             system_instruction=AgentConfig.get_system_prompt(),
             tools=[playwright_browser_tool],
         ),
+        is_single_use=True,  # chat is recreated every time
     )
 
     domain = _build_homepage_url(domain)
