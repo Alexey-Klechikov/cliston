@@ -215,7 +215,9 @@ async def call_garm_browser_control(domain: str, objective: str, task_id: str) -
         logging.error("All attempts failed. Returning failure report.")
         report.summary = "Failure: Both replay manual and autonomous planning failed."
 
-    output = str(report.model_dump(mode="json", exclude_none=True))
+    output = "\n".join(
+        [f"> {k}: {v}" for k, v in report.model_dump(mode="json", exclude_none=True, exclude={"manual"}).items()],
+    )
     log_task_output(role=AgentConfig.ROLE, task_id=task_id, output=output)
 
     return output
