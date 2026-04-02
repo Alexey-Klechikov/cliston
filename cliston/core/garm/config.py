@@ -78,7 +78,7 @@ Your final output MUST be a structured JSON object containing:
     REPORT_SCHEMA = {
         "type": "OBJECT",
         "properties": {
-            "result": {"type": "STRING", "enum": ["Success", "Failure"]},
+            "result": {"type": "STRING", "enum": ["SUCCESS", "FAILURE"]},
             "data": {"type": "STRING", "description": "The raw telemetry extracted."},
             "summary": {"type": "STRING", "description": "High-velocity abrasive summary."},
             "manual": {

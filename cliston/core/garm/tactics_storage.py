@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from datetime import UTC, datetime
 
@@ -14,6 +15,15 @@ class TacticsStorage:
 
     def __init__(self):
         self.db_path = str(DB_PATH_GARM_INTELLIGENCE)
+
+    @staticmethod
+    def _serialize_manual_steps(manual: TacticalManual) -> str:
+        return json.dumps(manual.steps, ensure_ascii=True)
+
+    @staticmethod
+    def _deserialize_manual_steps(raw_steps: str) -> list[str]:
+        parsed = json.loads(raw_steps)
+        return TacticalManual.normalize_steps(parsed)
 
     async def _ensure_initialized(self):
         if self._initialized:
@@ -33,7 +43,7 @@ class TacticsStorage:
                 CREATE TABLE IF NOT EXISTS tactical_manuals (
                     domain TEXT NOT NULL,
                     objective TEXT NOT NULL,
-                    manual TEXT,
+                    steps TEXT NOT NULL,
                     success_count INTEGER DEFAULT 0,
                     failure_count INTEGER DEFAULT 0,
                     last_updated TIMESTAMP,
@@ -50,7 +60,7 @@ class TacticsStorage:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
-                "SELECT objective, manual, success_count, failure_count, last_updated "
+                "SELECT objective, steps, success_count, failure_count, last_updated "
                 "FROM tactical_manuals WHERE domain = ?",
                 (domain,),
             ) as cursor:
@@ -59,7 +69,7 @@ class TacticsStorage:
                     TacticalManual(
                         domain=domain,
                         objective=row["objective"],
-                        manual=row["manual"],
+                        steps=self._deserialize_manual_steps(row["steps"]),
                         success_count=row["success_count"],
                         failure_count=row["failure_count"],
                         last_updated=(
@@ -75,22 +85,23 @@ class TacticsStorage:
     async def archive_manual(self, manual: TacticalManual) -> None:
         """Save a newly drafted manual from Garm's infiltration."""
         await self._ensure_initialized()
+        serialized_steps = self._serialize_manual_steps(manual)
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
                 INSERT INTO tactical_manuals
-                (domain, objective, manual, last_updated, success_count, failure_count)
+                (domain, objective, steps, last_updated, success_count, failure_count)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(domain, objective)
                 DO UPDATE SET
-                    manual = excluded.manual,
+                    steps = excluded.steps,
                     last_updated = excluded.last_updated
             """,
                 (
                     manual.domain,
                     manual.objective,
-                    manual.manual,
+                    serialized_steps,
                     datetime.now(UTC).isoformat(),
                     manual.success_count,
                     manual.failure_count,

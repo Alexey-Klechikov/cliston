@@ -202,4 +202,4 @@ cliston/data/*/vectorstore/
 embedder_service/loaded_models
 cliston/data/crewai_storage/
 cliston/data/vectorstore/
-cliston/logs/
+cliston/logs/*.txt

@@ -2,11 +2,12 @@ import logging
 
 from api.rag.models import ExtractCharacterProfileResponse, LoadDocumentsResponse
 from api.rag.prompts import CharacterPersonalityExtractionPrompt
-from config import ModelConfig
 from services.document.loader import get_document_loader
 from services.genai.operators import ask
 from services.vectors.retriever import HybridRetriever
 from services.vectors.store import get_vector_store
+
+from cliston.settings import settings
 
 
 async def _load_documents() -> LoadDocumentsResponse:
@@ -39,7 +40,7 @@ async def handle_extract_character_profile(character_name: str) -> ExtractCharac
     context = retriever.format_context(chunks)
 
     character_profile = await ask(
-        model=ModelConfig.ASK_GEMINI_MODEL,
+        model=settings.ASK_GEMINI_MODEL,
         system_prompt=CharacterPersonalityExtractionPrompt.get(),
         document_context=context,
         user_prompt="Character name to extract: " + character_name,

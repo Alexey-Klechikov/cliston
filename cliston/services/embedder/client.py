@@ -4,14 +4,15 @@ from typing import Any
 
 import httpx
 import numpy as np
-from config import EmbedderConfig
+
+from cliston.settings import settings
 
 
 class EmbeddingService:
     def __init__(self):
-        self._embedder_url = EmbedderConfig.EMBEDDER_URL
-        self._timeout_seconds = EmbedderConfig.EMBEDDER_TIMEOUT_SECONDS
-        self._batch_size = max(1, EmbedderConfig.EMBEDDER_BATCH_SIZE)
+        self._embedder_url = settings.EMBEDDER_URL
+        self._timeout_seconds = settings.EMBEDDER_TIMEOUT_SECONDS
+        self._batch_size = max(1, settings.EMBEDDER_BATCH_SIZE)
         self._client: httpx.Client | None = None
 
         logging.info("EmbeddingService initialized")

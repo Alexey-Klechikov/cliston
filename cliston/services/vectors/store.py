@@ -5,18 +5,19 @@ from typing import Any
 
 import chromadb
 import numpy as np
-from config import VectorConfig
 from data import VECTORSTORE_DIR_PATH
 from services.document.models import Chunk, ChunkMetadata
 from services.embedder.client import EmbeddingService
 from services.vectors.models import ChunksTracker
 from utils import asyncify
 
+from cliston.settings import settings
+
 
 class VectorStore:
     def __init__(
         self,
-        collection_name: str = VectorConfig.COLLECTION_NAME_BOOKS,
+        collection_name: str = settings.COLLECTION_NAME_BOOKS,
         embedding_service: EmbeddingService | None = None,
     ):
         self.collection_name = collection_name
@@ -132,7 +133,7 @@ class VectorStore:
 
         await self._add_new_chunks_to_collection(embeddings=embeddings)
 
-    async def query(self, query_text: str, top_k: int = VectorConfig.RETRIEVAL_TOP_K) -> list[Chunk]:
+    async def query(self, query_text: str, top_k: int = settings.RETRIEVAL_TOP_K) -> list[Chunk]:
         retrieved_documents = []
 
         query_embedding = self.embedding_service.embed_text(query_text)

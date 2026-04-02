@@ -16,10 +16,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from api.health.routers import router as health_router
 from api.rag.routers import router as rag_router
 from api.task.routers import router as task_router
-from config import AppConfig
+
+from cliston.settings import settings
 
 # Configure logging
-log_level = AppConfig.LOG_LEVEL
+log_level = settings.LOG_LEVEL
 log_format = "%(asctime)s [%(levelname)s] %(message)s"
 if log_level.upper() == "DEBUG":
     log_format = "%(asctime)s [%(levelname)s] [%(name)s] - %(message)s"
@@ -42,8 +43,8 @@ async def lifespan(_: FastAPI):
 
 # Initialize FastAPI app
 app = FastAPI(
-    title=AppConfig.API_TITLE,
-    version=AppConfig.API_VERSION,
+    title=settings.API_TITLE,
+    version=settings.API_VERSION,
     description="Cliston",
     lifespan=lifespan,
 )
@@ -80,16 +81,16 @@ async def catch_unhandled_exceptions(request: Request, call_next):
 
 
 def main():
-    logging.info(f"Starting {AppConfig.API_TITLE} v{AppConfig.API_VERSION}")
-    logging.info(f"Server will be available at http://{AppConfig.API_HOST}:{AppConfig.API_PORT}")
-    logging.info(f"Docs available at http://{AppConfig.API_HOST}:{AppConfig.API_PORT}/docs")
+    logging.info(f"Starting {settings.API_TITLE} v{settings.API_VERSION}")
+    logging.info(f"Server will be available at http://{settings.API_HOST}:{settings.API_PORT}")
+    logging.info(f"Docs available at http://{settings.API_HOST}:{settings.API_PORT}/docs")
 
     uvicorn.run(
         app,
-        host=AppConfig.API_HOST,
-        port=AppConfig.API_PORT,
+        host=settings.API_HOST,
+        port=settings.API_PORT,
         reload=False,
-        log_level=AppConfig.LOG_LEVEL.lower(),
+        log_level=settings.LOG_LEVEL.lower(),
     )
 
 

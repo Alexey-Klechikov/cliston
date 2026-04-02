@@ -1,16 +1,20 @@
 import logging
 
-from config import DocumentConfig
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pydantic import Field
 from services.document.models import Chunk, ChunkMetadata
+
+from cliston.settings import settings
+
+SEPARATORS: list[str] = Field(default_factory=lambda: ["\n\n\n", "\n\n", "\n", ".", "!", "?"])
 
 
 class DocumentChunker:
     def __init__(self):
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DocumentConfig.CHUNK_SIZE,
-            chunk_overlap=DocumentConfig.CHUNK_OVERLAP,
-            separators=DocumentConfig.SEPARATORS,
+            chunk_size=settings.CHUNK_SIZE,
+            chunk_overlap=settings.CHUNK_OVERLAP,
+            separators=SEPARATORS,
             length_function=len,
         )
         logging.info("Initialized DocumentChunker")

@@ -1,19 +1,14 @@
-import json
-import logging
 import re
 from datetime import UTC, datetime
 from typing import Any
 
-from google.genai import types
-
-from cliston.core.garm.models import TacticalManual, ToolCallTrace
+from cliston.core.garm.models import Report, ReportResult, TacticalManual, ToolCallTrace
 from cliston.core.garm.tactics_storage import TacticsStorage
 from cliston.core.models import ToolCall
 
 
 class TacticsManager:
     MIN_RELIABILITY = 0.5
-    SUCCESS_RESULT = "success"
     QUERY_PLACEHOLDER = "[QUERY]"
     TICKER_PLACEHOLDER = "[TICKER]"
     TYPE_ACTION = "type"
@@ -23,37 +18,12 @@ class TacticsManager:
         self.execution_trace: list[ToolCallTrace] = []
 
     @staticmethod
-    def _normalize_manual_steps(manual_steps: str | list[str]) -> list[str]:
-        # Convert to list of lines and filter empty
-        lines = manual_steps if isinstance(manual_steps, list) else manual_steps.splitlines()
-        cleaned = [str(step).strip() for step in lines if str(step).strip()]
+    def _normalize_manual_steps(manual_steps: list[str]) -> list[str]:
+        cleaned = [str(step).strip() for step in manual_steps if str(step).strip()]
 
         # Remove leading numbers (e.g. "1. ") and return non-empty steps
         normalized = [re.sub(r"^\d+\.\s*", "", step).strip() for step in cleaned]
         return [step for step in normalized if step]
-
-    @staticmethod
-    def inject_manuals_into_request(
-        request: list[types.Part],
-        existing_manuals: list[TacticalManual],
-    ) -> list[types.Part]:
-        if existing_manuals:
-            logging.info(f"Injecting {len(existing_manuals)} TACTICAL_MANUALS into Garm's knowledge base.")
-
-            request += [
-                types.Part.from_text(
-                    text=f"""
-    TACTICAL_MANUAL:
-    > objective: {i.objective}
-    > steps: {json.dumps(TacticsManager._normalize_manual_steps(i.manual), ensure_ascii=True)}
-    > reliability: {i.reliability}
-    > last_updated: {i.last_updated}
-    """,
-                )
-                for i in existing_manuals
-                if i.reliability >= TacticsManager.MIN_RELIABILITY
-            ]
-        return request
 
     @staticmethod
     def _tokenize(text: str) -> set[str]:
@@ -67,7 +37,7 @@ class TacticsManager:
         valid_manuals = [
             (m, len(objective_tokens & TacticsManager._tokenize(m.objective)) + m.reliability)
             for m in existing_manuals
-            if m.reliability >= TacticsManager.MIN_RELIABILITY and m.manual.strip()
+            if m.reliability >= TacticsManager.MIN_RELIABILITY and m.steps
         ]
 
         return max(valid_manuals, key=lambda x: x[1])[0] if valid_manuals else None
@@ -109,9 +79,9 @@ class TacticsManager:
         return ToolCall(name="browser_interact", arguments=arguments)
 
     @staticmethod
-    def parse_manual_to_tool_calls(manual_steps: str | list[str], objective: str) -> list[ToolCall]:
-        query_value = TacticsManager._extract_query_value(objective)
-        manual_steps_text = "\n".join(TacticsManager._normalize_manual_steps(manual_steps))
+    def parse_manual_to_tool_calls(manual: TacticalManual, objective: str | None = None) -> list[ToolCall]:
+        query_value = TacticsManager._extract_query_value(objective or manual.objective)
+        manual_steps_text = "\n".join(TacticsManager._normalize_manual_steps(manual.steps))
 
         parsed_calls: list[ToolCall] = []
         call_blobs = re.findall(r"browser_(?:navigate|inspect|interact)\([^\n]*\)", manual_steps_text)
@@ -162,8 +132,8 @@ class TacticsManager:
 
         def _format_inspect() -> str:
             return "browser_inspect()"
+            # Dispatch table
 
-        # Dispatch table
         formatters = {
             "browser_navigate": _format_navigate,
             "browser_interact": _format_interact,
@@ -200,49 +170,35 @@ class TacticsManager:
     async def create_or_update_tactical_manual(
         self,
         domain: str,
-        objective: str,
-        report: dict,
+        report: Report | None,
         existing_manuals: list[TacticalManual],
-        replay_manual: TacticalManual | None,
     ) -> None:
-        manual_name = (
-            report.get("manual", {}).get("name") or objective.strip().rstrip(".") or f"{domain} Browser Infiltration"
-        )
-
-        if not manual_name:
-            logging.warning("No TACTICAL_MANUAL name found in Garm's output. Skipping manual processing.")
+        if not (report and report.manual):
             return
 
         manual_steps = TacticsManager._build_verified_manual_steps(self.execution_trace)
-        is_success = report.get("result", "").lower() == self.SUCCESS_RESULT and bool(manual_steps)
-        normalized_name = TacticsManager._normalize_objective(manual_name)
+        normalized_name = TacticsManager._normalize_objective(report.manual.name)
         existing_manual = next(
             (m for m in existing_manuals if TacticsManager._normalize_objective(m.objective) == normalized_name),
             None,
         )
 
-        # Update reliability for replayed manual if different from existing
-        if replay_manual and (
-            not existing_manual
-            or TacticsManager._normalize_objective(replay_manual.objective)
-            != TacticsManager._normalize_objective(existing_manual.objective)
-        ):
-            await self.tactics_storage.update_reliability(replay_manual, success=is_success)
-
         # Update reliability for existing manual
         if existing_manual:
-            await self.tactics_storage.update_reliability(existing_manual, success=is_success)
-
-        # Only archive if successful
-        if not is_success:
+            await self.tactics_storage.update_reliability(
+                existing_manual,
+                success=report.result == ReportResult.SUCCESS,
+            )
             return
 
-        manual = "\n".join(f"{idx}. {step}" for idx, step in enumerate(manual_steps, start=1))
+        # Only archive if successful
+        if report.result == ReportResult.FAILURE or not manual_steps:
+            return
 
         new_manual = TacticalManual(
             domain=domain,
-            objective=manual_name,
-            manual=manual,
+            objective=report.manual.name,
+            steps=manual_steps,
             success_count=1,
             failure_count=0,
             last_updated=datetime.now(UTC),

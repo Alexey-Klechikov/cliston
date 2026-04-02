@@ -1,9 +1,8 @@
-import asyncio
 import logging
 from datetime import datetime
 
 from google.genai import types
-from services.genai.operators import get_or_create_chat
+from services.genai.operators import get_or_create_chat, send_message_with_retry
 from services.logging.operators import log_task_output
 
 from cliston.core.cliston.config import AgentConfig
@@ -74,7 +73,7 @@ async def call_cliston(user_query: str, task_id: str) -> str:
     for i in range(AgentConfig.ITERATION_BUDGET + 2):
         logging.info(f"Cliston iteration: {i + 1}")
 
-        response = await asyncio.to_thread(chat.send_message, request)
+        response = await send_message_with_retry(chat, request)
 
         tool_calls = get_tool_calls_from_response(response)
         if not tool_calls:

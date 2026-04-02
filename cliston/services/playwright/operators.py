@@ -53,43 +53,271 @@ async def browser_inspect() -> tuple[bytes, str]:
     # Capture Vision (Screenshot)
     screenshot_bytes = await page.screenshot(type="jpeg", quality=50, full_page=False)
 
-    # Capture Interactive Elements (Filtered DOM)
-    interactive_elements = await page.evaluate(
+    structured_snapshot = await page.evaluate(
         """
         () => {
-            const elements = Array.from(document.querySelectorAll('button, input, a, select, [role="button"]'))
-                .map(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        const classValue = typeof el.className === 'string' ? el.className : '';
-                        const firstClass = classValue.split(' ').filter(Boolean)[0] || '';
-                        const suggestedSelector =
-                            el.id ? `#${el.id}` :
-                            (el.getAttribute('name') ? `[name="${el.getAttribute('name')}"]` :
-                            (el.getAttribute('aria-label') ? `[aria-label="${el.getAttribute('aria-label')}"]` :
-                            (el.getAttribute('placeholder') ? `[placeholder="${el.getAttribute('placeholder')}"]` :
-                            (firstClass ? `${el.tagName.toLowerCase()}.${firstClass}` : el.tagName.toLowerCase()))));
+            const viewport = { width: window.innerWidth, height: window.innerHeight };
 
-                        return {
-                            tag: el.tagName,
-                            text: el.innerText || el.placeholder || el.ariaLabel,
-                            id: el.id,
-                            class: el.className,
-                            type: el.type,
-                            suggested_selector: suggestedSelector
-                        };
-                    }
-                }).filter(Boolean);
+            const compactText = (value) => (value || '').replace(/\\s+/g, ' ').trim();
 
-            // Keep payload compact so the model can reason over it reliably.
-            return JSON.stringify(elements.slice(0, 120));
+            const isVisible = (el) => {
+                if (!el) return false;
+                const style = window.getComputedStyle(el);
+                if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+                    return false;
+                }
+
+                const rect = el.getBoundingClientRect();
+                return (
+                    rect.width > 0 &&
+                    rect.height > 0 &&
+                    rect.bottom >= 0 &&
+                    rect.right >= 0 &&
+                    rect.top <= viewport.height &&
+                    rect.left <= viewport.width
+                );
+            };
+
+            const unique = (items) => Array.from(new Set(items));
+
+            const noiseTerms = new Set([
+                'logga in', 'bli kund', 'kundservice', 'nyheter', 'spara & investera', 'pension',
+                'bolan', 'borsen idag', 'visa som tabell', 'end of interactive chart',
+                'created with highcharts', 'investeringar innebar en risk', 'courtage & rakneexempel',
+                'oversikt', 'analys', 'nyheter & forum', 'jamfor', 'installningar',
+            ]);
+
+            const normalizeAscii = (value) =>
+                compactText(value)
+                    .toLowerCase()
+                    .replace(/å/g, 'a')
+                    .replace(/ä/g, 'a')
+                    .replace(/ö/g, 'o');
+
+            const isNoiseText = (text) => {
+                const normalized = normalizeAscii(text);
+                return !normalized || noiseTerms.has(normalized);
+            };
+
+            const numberPattern = /[+\\-−]?\\d{1,3}(?:[ \\u00A0]?\\d{3})*(?:,\\d{1,4})?/g;
+            const hasNumericSignal = (text) => numberPattern.test(text);
+            const hasFinanceSignal = (text) =>
+                /(sek|usd|eur|nok|dkk|pe-tal|p\\/e|direktavkastning|borsvarde|vinst\\/aktie|volatilitet|rapport|isin|beta|omsattning)/i.test(text);
+            const hasSignal = (text) => hasNumericSignal(text) || hasFinanceSignal(text);
+
+            const suggestedSelector = (el) => {
+                const classValue = typeof el.className === 'string' ? el.className : '';
+                const firstClass = classValue.split(' ').filter(Boolean)[0] || '';
+                return (
+                    el.id ? `#${el.id}` :
+                    (el.getAttribute('name') ? `[name="${el.getAttribute('name')}"]` :
+                    (el.getAttribute('aria-label') ? `[aria-label="${el.getAttribute('aria-label')}"]` :
+                    (el.getAttribute('placeholder') ? `[placeholder="${el.getAttribute('placeholder')}"]` :
+                    (firstClass ? `${el.tagName.toLowerCase()}.${firstClass}` : el.tagName.toLowerCase()))))
+                );
+            };
+
+            const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4'))
+                .filter(isVisible)
+                .map((el) => compactText(el.textContent))
+                .filter((text) => text.length >= 2 && text.length <= 120)
+                .filter((text) => !isNoiseText(text))
+                .slice(0, 40);
+
+            const leafTexts = Array.from(
+                document.querySelectorAll('h1, h2, h3, h4, p, li, td, th, span, strong, label, button, a'),
+            )
+                .filter(isVisible)
+                .filter((el) => el.children.length === 0)
+                .map((el) => compactText(el.textContent))
+                .filter((text) => text.length >= 2 && text.length <= 140)
+                .filter((text) => !isNoiseText(text))
+                .filter((text, i, arr) => arr.indexOf(text) === i)
+                .slice(0, 500);
+
+            const signalText = leafTexts
+                .filter((text) => hasSignal(text))
+                .slice(0, 180);
+
+            const contextText = leafTexts
+                .filter((text) => !hasSignal(text))
+                .filter((text) => text.length >= 8 && text.length <= 90)
+                .slice(0, 90);
+
+            const links = Array.from(document.querySelectorAll('a[href]'))
+                .filter(isVisible)
+                .map((el) => ({
+                    text: compactText(el.textContent),
+                    href: el.getAttribute('href') || '',
+                    selector: suggestedSelector(el),
+                }))
+                .filter((link) => link.text && !isNoiseText(link.text))
+                .slice(0, 40);
+
+            const buttons = Array.from(
+                document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'),
+            )
+                .filter(isVisible)
+                .map((el) => ({
+                    text: compactText(el.innerText || el.getAttribute('value') || el.getAttribute('aria-label')),
+                    selector: suggestedSelector(el),
+                    disabled: !!el.disabled,
+                }))
+                .filter((button) => button.text && !isNoiseText(button.text))
+                .slice(0, 50);
+
+            const formFields = Array.from(document.querySelectorAll('input, textarea, select'))
+                .filter(isVisible)
+                .map((el) => ({
+                    tag: el.tagName.toLowerCase(),
+                    type: (el.getAttribute('type') || '').toLowerCase(),
+                    name: el.getAttribute('name') || '',
+                    id: el.id || '',
+                    placeholder: el.getAttribute('placeholder') || '',
+                    aria_label: el.getAttribute('aria-label') || '',
+                    value: compactText(el.value || ''),
+                    selector: suggestedSelector(el),
+                }))
+                .filter((field) => field.placeholder || field.name || field.id || field.value)
+                .slice(0, 70);
+
+            const tables = Array.from(document.querySelectorAll('table'))
+                .filter(isVisible)
+                .slice(0, 6)
+                .map((table) => {
+                    const headers = Array.from(table.querySelectorAll('th'))
+                        .map((el) => compactText(el.textContent))
+                        .filter(Boolean)
+                        .slice(0, 10);
+
+                    const rows = Array.from(table.querySelectorAll('tr'))
+                        .slice(0, 8)
+                        .map((row) =>
+                            Array.from(row.querySelectorAll('td, th'))
+                                .map((cell) => compactText(cell.textContent))
+                                .filter((text) => text.length > 0 && text.length <= 100)
+                                .slice(0, 10),
+                        )
+                        .filter((row) => row.length > 0);
+
+                    return { headers, rows };
+                })
+                .filter((table) => table.headers.length > 0 || table.rows.length > 0);
+
+            const lists = Array.from(document.querySelectorAll('ul, ol'))
+                .filter(isVisible)
+                .slice(0, 8)
+                .map((list) =>
+                    Array.from(list.querySelectorAll(':scope > li'))
+                        .map((li) => compactText(li.textContent))
+                        .filter((text) => text.length > 0 && text.length <= 80)
+                        .slice(0, 8),
+                )
+                .filter((items) => items.length > 0);
+
+            const dtPairs = Array.from(document.querySelectorAll('dt'))
+                .filter(isVisible)
+                .map((dt) => {
+                    const dd = dt.nextElementSibling && dt.nextElementSibling.tagName.toLowerCase() === 'dd'
+                        ? dt.nextElementSibling
+                        : null;
+                    return {
+                        label: compactText(dt.textContent),
+                        value: compactText(dd ? dd.textContent : ''),
+                    };
+                })
+                .filter((pair) => pair.label && pair.value && hasSignal(pair.value))
+                .slice(0, 60);
+
+            const inlinePairs = Array.from(
+                document.querySelectorAll('tr, .row, [class*="row"], [class*="item"], [class*="stat"]'),
+            )
+                .filter(isVisible)
+                .slice(0, 140)
+                .map((el) => {
+                    const chunks = unique(
+                        Array.from(el.querySelectorAll('td, th, span, strong, label, div'))
+                            .filter(isVisible)
+                            .map((n) => compactText(n.textContent))
+                            .filter((text) => text.length > 0 && text.length <= 80),
+                    );
+
+                    if (chunks.length < 2) return null;
+                    return { label: chunks[0], value: chunks[1] };
+                })
+                .filter(Boolean)
+                .filter((pair) => pair.label && pair.value && hasSignal(pair.value))
+                .slice(0, 80);
+
+            const keyValueCandidates = [...dtPairs, ...inlinePairs]
+                .filter((pair) => pair.label && pair.value)
+                .slice(0, 120);
+
+            const numericCandidates = unique(
+                [...signalText, ...keyValueCandidates.map((pair) => pair.value)]
+                    .flatMap((text) => text.match(numberPattern) || [])
+                    .map((value) => value.replace(/\\s+/g, ''))
+                    .filter((value) => value.length >= 2),
+            ).slice(0, 80);
+
+            const interactiveElements = Array.from(
+                document.querySelectorAll('button, input, a, select, [role="button"]'),
+            )
+                .filter(isVisible)
+                .map((el) => ({
+                    tag: el.tagName,
+                    text: compactText(el.innerText || el.placeholder || el.ariaLabel),
+                    id: el.id,
+                    class: typeof el.className === 'string' ? el.className : '',
+                    type: el.type,
+                    suggested_selector: suggestedSelector(el),
+                }))
+                .filter((el) => (el.text && !isNoiseText(el.text)) || el.tag === 'INPUT' || el.tag === 'SELECT')
+                .slice(0, 80);
+
+            const payload = {
+                url: location.href,
+                title: document.title,
+                headings,
+                signal_text: signalText,
+                context_text: contextText,
+                numeric_candidates: numericCandidates,
+                key_value_candidates: keyValueCandidates,
+                links,
+                buttons,
+                form_fields: formFields,
+                tables,
+                lists,
+                interactive_elements: interactiveElements,
+            };
+
+            const maxChars = 18000;
+            let serialized = JSON.stringify(payload);
+
+            if (serialized.length > maxChars) {
+                payload.context_text = payload.context_text.slice(0, 40);
+                payload.links = payload.links.slice(0, 20);
+                payload.buttons = payload.buttons.slice(0, 24);
+                payload.lists = payload.lists.slice(0, 4);
+                serialized = JSON.stringify(payload);
+            }
+
+            if (serialized.length > maxChars) {
+                payload.tables = payload.tables.slice(0, 2);
+                payload.signal_text = payload.signal_text.slice(0, 80);
+                payload.key_value_candidates = payload.key_value_candidates.slice(0, 60);
+                payload.interactive_elements = payload.interactive_elements.slice(0, 50);
+                serialized = JSON.stringify(payload);
+            }
+
+            return serialized;
         }
         """,
     )
 
     return (
         screenshot_bytes,
-        f"Interactive DOM Elements: {interactive_elements}",
+        f"Visible Frontend Snapshot: {structured_snapshot}",
     )
 
 

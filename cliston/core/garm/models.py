@@ -1,6 +1,7 @@
 from datetime import datetime
+from enum import StrEnum
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from cliston.core.models import ToolCall
 
@@ -18,10 +19,17 @@ ERROR_MARKERS = (
 class TacticalManual(BaseModel):
     domain: str
     objective: str
-    manual: str
+    steps: list[str] = Field(default_factory=list)
     success_count: int = 0
     failure_count: int = 0
     last_updated: datetime
+
+    @staticmethod
+    def normalize_steps(steps: list[str] | None) -> list[str]:
+        if not steps:
+            return []
+
+        return [str(step).strip() for step in steps if str(step).strip()]
 
     @model_validator(mode="after")
     def normalize_domain(self):
@@ -41,3 +49,25 @@ class ToolCallTrace(BaseModel):
     @property
     def success(self) -> bool:
         return bool(self.result) and not any(marker in self.result.lower() for marker in ERROR_MARKERS)
+
+
+class ReportResult(StrEnum):
+    SUCCESS = "SUCCESS"
+    FAILURE = "FAILURE"
+
+
+class ReportManual(BaseModel):
+    name: str
+    steps: list[str]
+
+
+class Report(BaseModel):
+    result: ReportResult = ReportResult.FAILURE
+    data: str | None = None
+    summary: str | None = None
+    manual: ReportManual | None = None
+
+    @model_validator(mode="before")
+    def validate_manual(cls, values):
+        values["result"] = ReportResult[values.get("result", "FAILURE").upper()]
+        return values

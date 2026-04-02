@@ -1,13 +1,16 @@
 import asyncio
 import logging
 from datetime import date, datetime
+from typing import cast
 
-from google.genai import types
+from google.genai import errors, types
 from google.genai.chats import Chat
 from pydantic import Field
 from services.genai.client import get_client
 
 _chats: dict[str, Chat] = {}
+_TRANSIENT_STATUS_CODES = {429, 503}
+_MAX_RETRIES = 4
 
 
 def _create_chat_id(agent_id: str) -> str:
@@ -47,6 +50,42 @@ def get_or_create_chat(
     return _chats[chat_id]
 
 
+async def send_message_with_retry(
+    chat: Chat,
+    message: str | list[types.Part],
+    config: types.GenerateContentConfig | None = None,
+) -> types.GenerateContentResponse:
+    if config is not None:
+        config = config.model_copy(
+            update={
+                "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
+            },
+        )
+
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            return (
+                await asyncio.to_thread(chat.send_message, message, config)
+                if config
+                else await asyncio.to_thread(chat.send_message, message)
+            )
+        except errors.ServerError as e:
+            if attempt >= _MAX_RETRIES:
+                raise
+
+            delay_seconds = min(3, 2**attempt)
+            logging.warning(
+                "Transient Gemini API error (%s). Retrying in %ss (%s/%s).",
+                getattr(e, "status_code", "unknown"),
+                delay_seconds,
+                attempt + 1,
+                _MAX_RETRIES,
+            )
+            await asyncio.sleep(delay_seconds)
+
+    raise RuntimeError("Unreachable retry loop state")
+
+
 async def ask(
     model: str,
     user_prompt: str,
@@ -64,4 +103,4 @@ async def ask(
             thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.MEDIUM),
         ),
     )
-    return response.text or ""
+    return cast(types.GenerateContentResponse, response).text or ""
