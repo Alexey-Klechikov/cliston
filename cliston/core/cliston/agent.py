@@ -38,6 +38,7 @@ async def _process_tools_calls(
             try:
                 result = await call_garm_browser_control(
                     domain=tool_call.arguments.get("domain", ""),
+                    tactical_manual_name=tool_call.arguments.get("tactical_manual_name", ""),
                     objective=tool_call.arguments.get("objective", ""),
                     task_id=task_id,
                 )

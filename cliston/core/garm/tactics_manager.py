@@ -30,12 +30,17 @@ class TacticsManager:
         return {token for token in re.findall(r"[a-z0-9]+", text.lower()) if len(token) > 2}
 
     @staticmethod
-    def select_best_manual(existing_manuals: list[TacticalManual], objective: str) -> TacticalManual | None:
-        objective_tokens = TacticsManager._tokenize(objective)
-
+    def select_best_manual(
+        existing_manuals: list[TacticalManual],
+        requested_manual_name: str,
+    ) -> TacticalManual | None:
         # Filter valid manuals and score them
         valid_manuals = [
-            (m, len(objective_tokens & TacticsManager._tokenize(m.objective)) + m.reliability)
+            (
+                m,
+                len(TacticsManager._tokenize(requested_manual_name) & TacticsManager._tokenize(m.objective))
+                + m.reliability,
+            )
             for m in existing_manuals
             if m.reliability >= TacticsManager.MIN_RELIABILITY and m.steps
         ]

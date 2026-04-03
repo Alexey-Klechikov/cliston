@@ -125,6 +125,7 @@ async def _execute_replay_tactical_manual(
 async def _execute_autonomous_planning(
     request: list[types.Part],
     tactics_manager: TacticsManager,
+    tactical_manual_name: str,
 ) -> Report:
     logging.info("No suitable manual to replay or replay failed validation. Starting autonomous planning.")
     chat = get_or_create_chat(
@@ -173,18 +174,20 @@ async def _execute_autonomous_planning(
         ),
     )
     report = _extract_report_from_response(report_response)
+    if report.manual:
+        report.manual.name = tactical_manual_name
 
     return report
 
 
-async def call_garm_browser_control(domain: str, objective: str, task_id: str) -> str:
+async def call_garm_browser_control(domain: str, tactical_manual_name: str, objective: str, task_id: str) -> str:
     domain = _build_homepage_url(domain)
 
     initial_request = [types.Part.from_text(text=i) for i in [f"DOMAIN: {domain}", f"ORIGINAL_OBJECTIVE: {objective}"]]
 
     tactics_manager = TacticsManager()
     existing_manuals = await tactics_manager.tactics_storage.get_manuals(domain)
-    tactical_manual = tactics_manager.select_best_manual(existing_manuals, objective)
+    tactical_manual = tactics_manager.select_best_manual(existing_manuals, tactical_manual_name)
 
     report = Report()
     if tactical_manual:
@@ -203,6 +206,7 @@ async def call_garm_browser_control(domain: str, objective: str, task_id: str) -
         report = await _execute_autonomous_planning(
             request=initial_request.copy(),
             tactics_manager=tactics_manager,
+            tactical_manual_name=tactical_manual_name,
         )
 
         await tactics_manager.create_or_update_tactical_manual(

@@ -36,7 +36,7 @@ REACTION = ReactionEmoji.THUMBS_UP
 # Task
 # TASK_MESSAGE="How are you Cliston?"
 # TASK_MESSAGE = "Tell me the weather in Stockholm right now"
-TASK_MESSAGE = "Find me the latest price of 'OMX30' using www.avanza.se."
+TASK_MESSAGE = "Find me the latest price of 'OMX30' from www.avanza.se using 'Find Stock Price' tactical manual."
 # TASK_MESSAGE = "Explain to me what Active Share is"
 
 TASK_POLL_INTERVAL_SECONDS = 20.0
