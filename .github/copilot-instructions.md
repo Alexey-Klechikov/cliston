@@ -1,68 +1,59 @@
-# Cliston — Workspace Instructions
+# Karpathy-inspired coding guidelines
 
-Cliston is a FastAPI service that routes natural-language queries through a hierarchy of three Gemini-powered AI agents (Cliston → MTB / Garm). It includes a RAG pipeline over a local book corpus (ChromaDB + external embedder sidecar) and Playwright-based browser automation with SQLite-backed tactical replay.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## Build & Run
+## 1. Think Before Coding
 
-```bash
-uv sync                         # install deps (Python 3.12 only)
-uv run python cliston/main.py   # local dev; API at http://0.0.0.0:8100/docs
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-docker compose up --build       # full stack (chat-service only; embedder runs separately)
-docker compose down
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
 ```
 
-Required env vars in `.env`: `GOOGLE_STUDIO_KEY`, `TAVILY_API_KEY`, `TELEGRAM_BOT_TOKEN`.
-Optional: `EMBEDDER_URL`, `EMBEDDER_TIMEOUT_SECONDS`, `EMBEDDER_BATCH_SIZE`.
-
-## Architecture
-
-```
-cliston/
-  api/          # FastAPI routers: /health, /task, /rag
-  core/
-    cliston/    # Orchestrator agent (gemini-2.5-flash-lite, budget=3, retains daily chat)
-    mtb/        # Web search agent — Tavily, is_single_use=True (fresh chat per call)
-    garm/       # Browser automation agent — Playwright Firefox, tactical manual replay
-  services/
-    genai/      # Singleton Gemini client; chats keyed {agent_id}_{YYYY-MM-DD}
-    embedder/   # HTTP client to embedder sidecar (port 8009, sync httpx)
-    vectors/    # ChromaDB at cliston/data/vectorstore/, collection "books"
-    document/   # PDF/docx loader + recursive char splitter (chunk=1500, overlap=150)
-    playwright/ # Firefox session; headless=False — requires a display
-    tavily_search/
-    telegram/
-    logging/    # Writes logs to cliston/logs/ as {date}_{time}_{status}.txt
-```
-
-**Garm tactical manuals** — stored in SQLite (`cliston/data/tables/garm_intelligence.db`), PK = `(domain, objective)`. Replay requires an exact objective string match.
-
-## Import Convention
-
-`main.py` inserts `sys.path` so two styles coexist:
-- Agent files use `from cliston.core.xxx import ...` (fully qualified)
-- Routers use `from api.xxx import ...` (relative-to-root)
-
-**Always match the style of the file you're editing.** Mixing styles in a new file will fail depending on CWD. Prefer the fully qualified `cliston.` prefix for new code.
-
-## Key Patterns
-
-- **Config**: Plain classes with class-level `os.getenv()` constants — not Pydantic `BaseSettings`.
-- **Async/sync bridge**: Gemini SDK and embedding client are synchronous; always wrap in `asyncio.to_thread()`.
-- **Task state is in-memory only** — `_task_states` dict is lost on restart; no persistence.
-- **Dirs created at import time** — `Path.mkdir()` calls in `__init__.py` and config class bodies are side effects; don't be surprised by automatic directory creation.
-
-## Known Pitfalls
-
-- **`headless=False`** — Playwright will crash in headless/CI environments. Change to `True` for server use.
-- **Embedder not in docker-compose** — the `embedder-service` must run separately; RAG will silently time out without it.
-- **`pytest pythonpath = ["src"]`** — wrong path; tests need `cliston/` on the path. Run pytest from the workspace root with `PYTHONPATH=.` or fix `pyproject.toml` before adding tests.
-- **`POST /task/execute` blocks** — despite returning 202, it awaits the full agent chain; no real async task queue.
-- **Gemini model names** — verify model strings against available API models; `gemini-3.1-flash-lite-preview` in RAG config may be incorrect.
-
-## Coding Guidelines
-
-- **Simplicity first**: minimum code that solves the problem. No speculative features or abstractions.
-- **Surgical changes**: touch only what the request requires; don't refactor adjacent code.
-- **No over-engineering**: no error handling for impossible scenarios, no helpers for one-time operations.
-- **State assumptions explicitly** before implementing; surface trade-offs rather than picking silently.
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

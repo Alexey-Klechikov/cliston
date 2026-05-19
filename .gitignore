@@ -197,6 +197,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+.lock
 
 cliston/data/*/vectorstore/
 embedder_service/loaded_models
